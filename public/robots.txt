@@ -1,60 +1,14 @@
 # ULAB - Universal Local AI Bridge
-# Robots.txt - SEO Configuration
-
-# Allow all crawlers
+# Keep crawler policy domain-agnostic until the production domain is assigned.
 User-agent: *
 Allow: /
 
-# Sitemap location
-Sitemap: https://ulab.dev/sitemap.xml
-
-# Crawl-delay for respectful crawling
-Crawl-delay: 1
-
-# Disallow sensitive paths
+# Do not crawl private/internal URL namespaces if they are introduced later.
 Disallow: /api/
 Disallow: /admin/
 Disallow: /private/
 Disallow: /temp/
 Disallow: /cache/
 
-# Allow important paths
-Allow: /docs/
-Allow: /blog/
-Allow: /features/
-Allow: /pricing/
-Allow: /about/
-Allow: /contact/
-
-# Block specific file types
+# Avoid indexing machine-readable JSON endpoints/files.
 Disallow: /*.json$
-Disallow: /*.xml$
-Disallow: /*.log$
-Disallow: /*.tmp$
-
-# Allow image and asset files
-Allow: /*.png$
-Allow: /*.jpg$
-Allow: /*.jpeg$
-Allow: /*.gif$
-Allow: /*.svg$
-Allow: /*.webp$
-Allow: /*.css$
-Allow: /*.js$
-
-# Specific rules for major search engines
-User-agent: Googlebot
-Allow: /
-Crawl-delay: 0
-
-User-agent: Bingbot
-Allow: /
-Crawl-delay: 1
-
-User-agent: Baiduspider
-Allow: /
-Crawl-delay: 2
-
-User-agent: YandexBot
-Allow: /
-Crawl-delay: 1
