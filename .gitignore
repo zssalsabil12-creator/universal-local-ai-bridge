@@ -39,3 +39,9 @@ windows-runtime-test/*.log
 *.key
 *.p12
 *.pfx
+
+# Local packaging/build helpers not required by the web deployment
+build-extension.bat
+build-extension.js
+build-package.js
+build-windows-test-package.bat
