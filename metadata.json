@@ -1,0 +1,6 @@
+{
+  "name": "ULAB — Universal Local AI Bridge",
+  "description": "Connect any AI chatbot to your local computer and projects with privacy, local execution, and context management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

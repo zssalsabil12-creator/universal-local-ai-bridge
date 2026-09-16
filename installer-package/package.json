@@ -1,0 +1,11 @@
+{
+  "name": "ulab-windows-installer",
+  "version": "1.0.0",
+  "main": "../scripts/ulab-installer.js",
+  "bin": "../scripts/ulab-installer.js",
+  "pkg": {
+    "assets": ["ULAB-v1.0.0-Windows.zip"],
+    "targets": ["node18-win-x64"],
+    "outputPath": "../release/ULAB-Setup.exe"
+  }
+}

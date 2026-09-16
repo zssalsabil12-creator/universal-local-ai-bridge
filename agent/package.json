@@ -1,0 +1,41 @@
+{
+  "name": "ulab-agent",
+  "version": "1.0.0",
+  "description": "Universal Local AI Bridge - Local Agent for Windows",
+  "main": "dist/index.js",
+  "bin": {
+    "ulab-agent": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js",
+    "package": "pkg . --targets node18-win-x64 --output dist/ulab-agent.exe"
+  },
+  "keywords": [
+    "ai",
+    "local",
+    "bridge",
+    "agent"
+  ],
+  "author": "ULAB Team",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/ws": "^8.5.10",
+    "pkg": "^5.8.1",
+    "typescript": "^5.3.3"
+  },
+  "pkg": {
+    "assets": [
+      "native-messaging/**/*"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "dist"
+  }
+}
