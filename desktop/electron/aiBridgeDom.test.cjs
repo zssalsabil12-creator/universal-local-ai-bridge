@@ -1,5 +1,9 @@
 const assert = require('assert');
+const os = require('node:os');
+const path = require('node:path');
 const { app, BrowserWindow } = require('electron');
+
+app.setPath('userData', path.join(os.tmpdir(), 'ulab-ai-bridge-dom-test-' + process.pid));
 const {
   buildAIInteractionScript,
   buildAIProbeScript,
@@ -38,8 +42,17 @@ async function run() {
 
   const probe = await win.webContents.executeJavaScript(buildAIProbeScript(), true);
   assert.equal(probe.ok, true);
+  assert.equal(probe.state, 'READY');
+  assert.equal(probe.authRequired, false);
   assert.ok(probe.inputs.length >= 1);
   assert.ok(probe.sendButtons.length >= 1);
+
+  const authPage = '<form><input type="password" autocomplete="current-password"><button aria-label="Sign in">Sign in</button></form>';
+  await win.webContents.executeJavaScript('document.body.innerHTML = ' + JSON.stringify(authPage), true);
+  const authProbe = await win.webContents.executeJavaScript(buildAIProbeScript(), true);
+  assert.equal(authProbe.ok, true);
+  assert.equal(authProbe.state, 'AUTH_REQUIRED');
+  assert.equal(authProbe.authRequired, true);
 
   await win.webContents.executeJavaScript(`document.body.innerHTML = '<main id="conversation"><div id="host"></div></main>';\
 const host=document.getElementById('host'); const shadow=host.attachShadow({mode:'open'});\

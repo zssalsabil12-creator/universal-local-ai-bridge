@@ -161,6 +161,29 @@ async function sendTextToAI(text) {
   if (!aiView) return { ok:false, error:'AI_SESSION_NOT_OPEN' };
   if (!isUsableAIWebContents(aiView)) return { ok:false, reason:'AI_PAGE_NOT_READY', error:'The AI page is still loading or has not initialized.' };
   try {
+    const diagnostics = await diagnoseAIPage();
+    if (diagnostics?.ok && diagnostics.authRequired) {
+      sendToRenderer('ai-session-status', {
+        provider: aiProvider,
+        status:'auth-required',
+        url:diagnostics.url,
+        title:diagnostics.title
+      });
+      return {
+        ok:false,
+        reason:'AI_AUTH_REQUIRED',
+        error:'Sign in to the selected AI service inside the ULAB session, then retry.',
+        url:diagnostics.url
+      };
+    }
+    if (diagnostics?.ok && diagnostics.state === 'NO_COMPOSER') {
+      return {
+        ok:false,
+        reason:'AI_INPUT_NOT_FOUND',
+        error:'The AI page is open, but no usable message composer is visible yet.',
+        url:diagnostics.url
+      };
+    }
     return await Promise.race([
       aiView.webContents.executeJavaScript(aiInjectionScript(text), true),
       new Promise(resolve => setTimeout(() => resolve({ ok:false, reason:'AI_SCRIPT_TIMEOUT', error:'AI page script timed out.' }), 12000))
@@ -459,11 +482,22 @@ async function openAISession(providerId, customUrl = '') {
     closeAISession();
     return { ok:false, error:'AI_PAGE_NOT_READY' };
   }
+  const diagnostics = await diagnoseAIPage();
+  const authRequired = diagnostics?.ok === true && diagnostics.authRequired === true;
+  sendToRenderer('ai-session-status', {
+    provider:providerId,
+    status:authRequired ? 'auth-required' : 'ready',
+    url:diagnostics?.url || aiView.webContents.getURL() || targetUrl,
+    title:diagnostics?.title || ''
+  });
   return {
     provider:providerId,
     name:p.name,
     url:aiView.webContents.getURL() || targetUrl,
     ready:true,
+    authRequired,
+    sessionState:diagnostics?.state || 'UNKNOWN',
+    diagnostics,
     loadingComplete:loadResult.complete === true,
     slowLoad:loadResult.slow === true
   };
@@ -569,7 +603,7 @@ ipcMain.handle('mcp-config', async () => ({
 ipcMain.handle('mcp-diagnostics', async () => {
   const discover = await callMCP('server/discover', 'server/discover', {
     _meta:{
-      'io.modelcontextprotocol/clientInfo':{name:'ULAB Desktop',version:'3.10.2'},
+      'io.modelcontextprotocol/clientInfo':{name:'ULAB Desktop',version:'3.10.3'},
       'io.modelcontextprotocol/clientCapabilities':{},
     },
   });
@@ -675,13 +709,16 @@ ipcMain.handle('ai-reject', async (_event, payload) => {
 });
 
 ipcMain.handle('ai-close', () => { closeAISession(); return {ok:true}; });
-ipcMain.handle('ai-status', () => {
+ipcMain.handle('ai-status', async () => {
   const ready = isUsableAIWebContents(aiView);
+  const diagnostics = ready ? await diagnoseAIPage() : null;
   return {
     open:!!aiView,
     provider:aiProvider,
     url:ready ? (aiView.webContents.getURL() || null) : null,
-    ready
+    ready,
+    authRequired:diagnostics?.authRequired === true,
+    sessionState:diagnostics?.state || 'CLOSED',
   };
 });
 ipcMain.handle('ai-diagnostics', async () => diagnoseAIPage());
@@ -712,16 +749,21 @@ ${context}`;
     setAIBridgeState('AI_CONTINUES', { action:'context.send' });
   } else {
     let errorMessage = result?.error || result?.reason || 'AI input could not be located. Sign in to the AI service and retry.';
+    if (result?.reason === 'AI_AUTH_REQUIRED') {
+      setAIBridgeState('AI_AUTH_REQUIRED', { action:'context.send', error:errorMessage });
+    }
     if (result?.reason === 'AI_INPUT_NOT_FOUND') {
       const diagnostics = await diagnoseAIPage();
       if (diagnostics?.ok) {
         errorMessage += ' Page diagnostics: ' + (diagnostics.inputs?.length || 0) + ' input, ' + (diagnostics.sendButtons?.length || 0) + ' send, ' + (diagnostics.assistantNodes?.length || 0) + ' assistant matches.';
       }
     }
-    setAIBridgeState('AGENT_ERROR', {
-      action:'context.send',
-      error: errorMessage
-    });
+    if (result?.reason !== 'AI_AUTH_REQUIRED') {
+      setAIBridgeState('AGENT_ERROR', {
+        action:'context.send',
+        error: errorMessage
+      });
+    }
   }
   return result;
 });

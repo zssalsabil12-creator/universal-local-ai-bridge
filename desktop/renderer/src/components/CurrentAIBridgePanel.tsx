@@ -42,8 +42,11 @@ export default function CurrentAIBridgePanel({
       if (data?.status === 'closed' || data?.status === 'error' || data?.status === 'navigation-blocked') {
         setAiOpen(false);
         if (data?.status !== 'navigation-blocked') setDiagnostics(null);
-      } else if (data?.status === 'ready') {
+      } else if (data?.status === 'ready' || data?.status === 'auth-required') {
         setAiOpen(true);
+        if (data?.status === 'auth-required') {
+          setBridgeState('AI_AUTH_REQUIRED');
+        }
       }
     });
     return () => { off?.(); offAI?.(); };
@@ -78,6 +81,7 @@ export default function CurrentAIBridgePanel({
     AI_CONTINUES: { label: 'AI continuing', dot: 'is-live' },
     APPROVAL_REQUIRED: { label: 'Approval required', dot: 'is-busy' },
     AGENT_ERROR: { label: 'Attention required', dot: 'is-busy' },
+    AI_AUTH_REQUIRED: { label: 'Sign in to AI', dot: 'is-busy' },
     AGENT_DISCONNECTED: { label: 'Agent offline', dot: 'is-busy' },
   };
 
@@ -92,6 +96,8 @@ export default function CurrentAIBridgePanel({
       try {
         const result = await window.ulabDesktop.openAI({ providerId, customUrl });
         if (result?.ready) setAiOpen(true);
+        if (result?.diagnostics) setDiagnostics(result.diagnostics);
+        if (result?.authRequired) setBridgeState('AI_AUTH_REQUIRED');
         return result;
       } catch (error) {
         setBridgeState('AGENT_ERROR');
@@ -163,7 +169,12 @@ export default function CurrentAIBridgePanel({
     }
 
     const result: any = await window.ulabDesktop.sendAIContext(payload);
-    if (result?.result?.ok === false || result?.ok === false) {
+    const sendResult = result?.result || result;
+    if (sendResult?.reason === 'AI_AUTH_REQUIRED') {
+      setBridgeState('AI_AUTH_REQUIRED');
+      const current = await window.ulabDesktop.aiDiagnostics();
+      setDiagnostics(current);
+    } else if (sendResult?.ok === false) {
       setBridgeState('AGENT_ERROR');
     }
   };
@@ -281,7 +292,21 @@ export default function CurrentAIBridgePanel({
             {diagnosticsBusy ? 'جاري فحص صفحة الـAI…' : 'تشخيص جلسة الـAI'}
           </button>
         )}
-      </section>      {diagnostics && (
+      </section>
+      {diagnostics?.authRequired && (
+        <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-[10px]" dir="auto">
+          <div className="flex items-start gap-2">
+            <Lock className="w-4 h-4 text-amber-300 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-bold text-amber-100">تسجيل الدخول مطلوب</p>
+              <p className="mt-1 text-amber-200/70 leading-relaxed">
+                جلسة {providerInfo.name} مفتوحة داخل ULAB، لكنها غير مسجلة الدخول بعد. سجّل الدخول داخل نافذة الـAI، ثم شغّل التشخيص مرة أخرى أو أرسل السياق.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      {diagnostics && (
         <div className="p-2 rounded-lg bg-[#0a0a0f] border border-white/[0.08] text-[9px]" dir="ltr">
           <div className="flex items-center justify-between gap-2 mb-1.5">
             <span className="font-bold text-[#dbe7ff]">AI Session</span>

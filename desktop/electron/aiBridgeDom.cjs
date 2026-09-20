@@ -107,12 +107,19 @@ function buildAIInteractionScript(text) {
     return { ok:true, mode:'enter', inputTag:el.tagName };
   })()`;
 }
+const LOGIN_SELECTORS = [
+  'input[type="password"]','input[name*="password" i]','input[autocomplete="current-password"]',
+  'button[aria-label*="sign in" i]','button[aria-label*="log in" i]','button[title*="sign in" i]',
+  'a[href*="/login" i]','a[href*="/signin" i]','a[href*="/auth" i]'
+];
+
 function buildAIProbeScript() {
   const inputSelectors = JSON.stringify(INPUT_SELECTORS);
   const sendSelectors = JSON.stringify(SEND_SELECTORS);
   return `(() => {
     const INPUT_SELECTORS = ${inputSelectors};
     const SEND_SELECTORS = ${sendSelectors};
+    const LOGIN_SELECTORS = ${JSON.stringify(LOGIN_SELECTORS)};
     const roots = [document];
     for (let i = 0; i < roots.length; i++) {
       try { roots[i].querySelectorAll('*').forEach(node => { if (node.shadowRoot && !roots.includes(node.shadowRoot)) roots.push(node.shadowRoot); }); } catch {}
@@ -122,7 +129,28 @@ function buildAIProbeScript() {
     const summarize = (node, selector) => ({ selector, tag:node.tagName, editable:!!node.isContentEditable, disabled:!!node.disabled, text:(node.innerText || node.getAttribute('aria-label') || node.getAttribute('placeholder') || '').slice(0,120) });
     const inputs = query(INPUT_SELECTORS).slice(0,8);
     const sends = query(SEND_SELECTORS).slice(0,8);
-    return { ok:true, url:location.href, title:document.title, inputs:inputs.map((n)=>summarize(n,'generic')), sendButtons:sends.map((n)=>summarize(n,'generic')), rootCount:roots.length };
+    const loginControls = query(LOGIN_SELECTORS).slice(0,8);
+    const assistantSelectors = [
+      '[data-message-author-role="assistant"]','[data-testid*="assistant"]','[data-role="assistant"]',
+      '[role="assistant"]','[aria-label*="assistant" i]','[data-author="assistant"]'
+    ];
+    const assistantNodes = query(assistantSelectors).filter(node => (node.innerText || '').trim()).slice(-8);
+    const urlLooksAuth = /(?:^|\\/)(?:login|signin|sign-in|auth)(?:[/?#]|$)/i.test(location.pathname);
+    const passwordField = query(['input[type="password"]','input[name*="password" i]','input[autocomplete="current-password"]']).length > 0;
+    const authRequired = inputs.length === 0 && (urlLooksAuth || passwordField || loginControls.length > 0);
+    const state = inputs.length > 0 && sends.length > 0 ? 'READY' : authRequired ? 'AUTH_REQUIRED' : 'NO_COMPOSER';
+    return {
+      ok:true,
+      state,
+      authRequired,
+      url:location.href,
+      title:document.title,
+      inputs:inputs.map((n)=>summarize(n,'generic')),
+      sendButtons:sends.map((n)=>summarize(n,'generic')),
+      assistantNodes:assistantNodes.map((n)=>summarize(n,'assistant')),
+      loginControls:loginControls.map((n)=>summarize(n,'login')),
+      rootCount:roots.length
+    };
   })()`;
 }
 

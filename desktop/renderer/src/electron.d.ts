@@ -27,6 +27,20 @@ declare global {
         provider?: string;
         name?: string;
         url?: string;
+        authRequired?: boolean;
+        sessionState?: string;
+        diagnostics?: {
+          ok?: boolean;
+          state?: string;
+          authRequired?: boolean;
+          url?: string;
+          title?: string;
+          inputs?: unknown[];
+          sendButtons?: unknown[];
+          assistantNodes?: unknown[];
+          loginControls?: unknown[];
+          rootCount?: number;
+        } | null;
       }>;
       closeAI: () => Promise<{ ok?: boolean }>;
       aiStatus: () => Promise<{
@@ -34,6 +48,8 @@ declare global {
         provider?: string | null;
         url?: string | null;
         ready?: boolean;
+        authRequired?: boolean;
+        sessionState?: string;
       }>;
       aiDiagnostics: () => Promise<unknown>;
       aiApprove: (approvalId: string, remember?: boolean) => Promise<unknown>;
