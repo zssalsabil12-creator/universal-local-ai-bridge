@@ -25,7 +25,6 @@ composer.addEventListener('submit', event => {
 
 async function wait(ms) { await new Promise(resolve => setTimeout(resolve, ms)); }
 async function run() {
-  if (process.platform === 'linux') app.commandLine.appendSwitch('no-sandbox');
   await app.whenReady();
   const win = new BrowserWindow({ show:false, webPreferences:{ contextIsolation:true, nodeIntegration:false, sandbox:true } });
   await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(fixture));
