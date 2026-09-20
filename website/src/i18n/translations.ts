@@ -327,7 +327,7 @@ export const translations: Record<Language, Translation> = {
     'workspace.context': 'السياق',
     'workspace.memory': 'الذاكرة',
     'workspace.permissions': 'الصلاحيات',
-    'workspace.tasks': 'Tâches',
+    'workspace.tasks': 'المهام',
     'workspace.compare': 'مقارنة',
     'workspace.git': 'Git',
     'workspace.terminal': 'Terminal',

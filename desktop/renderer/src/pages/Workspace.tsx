@@ -1450,7 +1450,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
           <Shield className="w-3 h-3" />
           {permissionMode === 'readonly' ? 'وضع القراءة' : permissionMode === 'assisted' ? 'بمساعدة' : 'وكيل'}
         </span>
-        <span>ULAB 3.10.4</span>
+        <span>ULAB 3.10.5</span>
         <span className="hidden sm:flex items-center gap-2 text-[#4a5568]">
           <span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+O</span> فتح
           <span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+F</span> بحث

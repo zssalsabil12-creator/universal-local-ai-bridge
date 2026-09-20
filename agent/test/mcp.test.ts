@@ -160,7 +160,7 @@ async function main(): Promise<void> {
     }, modernHeaders);
     assert.equal(discoverHttp.status, 200);
     assert.ok(discoverHttp.body.result.supportedVersions.includes(MODERN));
-    assert.equal(discoverHttp.body._meta['io.modelcontextprotocol/serverInfo'].version, '3.10.4');
+    assert.equal(discoverHttp.body._meta['io.modelcontextprotocol/serverInfo'].version, '3.10.5');
 
     const listHttp = await httpRequest({
       jsonrpc: '2.0',
