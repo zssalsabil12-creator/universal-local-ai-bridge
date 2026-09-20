@@ -1,0 +1,18 @@
+{
+  "name": "ulab-desktop",
+  "version": "3.10.0",
+  "private": true,
+  "author": "ULAB",
+  "description": "ULAB Desktop — Universal Local AI Bridge",
+  "main": "electron/main.cjs",
+  "dependencies": {
+    "ws": "8.21.3"
+  },
+  "scripts": {
+    "dev": "electron .",
+    "renderer:build": "npm --prefix renderer run build",
+    "renderer:typecheck": "npm --prefix renderer run typecheck",
+    "bridge:check": "node electron/aiBridgeSecurity.test.cjs",
+    "check": "node electron/aiBridgeSecurity.test.cjs && node --check electron/main.cjs && node --check electron/preload.cjs"
+  }
+}

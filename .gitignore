@@ -41,6 +41,18 @@ windows-runtime-test/*.log
 *.pfx
 
 # Local packaging/build helpers not required by the web deployment
+.freebuff/
+HANDOFF-*.md
+web-app/
+test-project/
+release-ulab-desktop/
+release-ulab-desktop-final/
+x.text
+_archive/
+desktop/renderer/src/components/*.clean
+website/downloads/ULAB.exe
+website/downloads/ULAB.exe.*
+website/downloads/SHA256.txt
 build-extension.bat
 build-extension.js
 build-package.js

@@ -1,4 +1,4 @@
-import * as WebSocket from 'ws';
+﻿import * as WebSocket from 'ws';
 import * as http from 'http';
 import * as crypto from 'crypto';
 import { WorkspaceManager } from './WorkspaceManager';
@@ -6,6 +6,7 @@ import { TerminalSecurityManager } from './TerminalSecurity';
 import { GitSecurityManager } from './GitSecurity';
 import { ContextBuilder } from './ContextBuilder';
 import { WorkspaceSession, StructuredError, AuditLogEntry } from './types';
+import { ULABMCPServer } from './MCPServer';
 
 export interface LocalAgentServerConfig {
   port: number;
@@ -13,6 +14,7 @@ export interface LocalAgentServerConfig {
   initialWorkspaceRoot?: string;
   rateLimitWindowMs?: number;
   maxRequestsPerWindow?: number;
+  onShutdown?: () => void | Promise<void>;
 }
 
 interface RateLimitRecord {
@@ -30,6 +32,7 @@ export class LocalAgentServer {
   private terminalManager: TerminalSecurityManager | null = null;
   private gitManager: GitSecurityManager | null = null;
   private contextBuilder: ContextBuilder | null = null;
+  private readonly mcpServer: ULABMCPServer;
 
   // Audit Logs (In-memory, tamper-evident within session)
   private auditLogs: AuditLogEntry[] = [];
@@ -38,6 +41,7 @@ export class LocalAgentServer {
   private rateLimitWindowMs: number;
   private maxRequestsPerWindow: number;
   private rateLimits: Map<string, RateLimitRecord> = new Map();
+  private readonly onShutdown?: () => void | Promise<void>;
 
   // Allowed Origins for CSWSH / CSRF protection
   private static readonly ALLOWED_ORIGIN_HOSTS = new Set([
@@ -52,6 +56,8 @@ export class LocalAgentServer {
     this.token = config.token || crypto.randomBytes(16).toString('hex');
     this.rateLimitWindowMs = config.rateLimitWindowMs || 10000; // 10 seconds
     this.maxRequestsPerWindow = config.maxRequestsPerWindow || 120; // 120 requests / 10 sec
+    this.onShutdown = config.onShutdown;
+    this.mcpServer = new ULABMCPServer(this);
 
     if (config.initialWorkspaceRoot) {
       this.switchWorkspace(config.initialWorkspaceRoot);
@@ -100,12 +106,7 @@ export class LocalAgentServer {
     if (!origin || origin === 'null') return true;
     try {
       const parsed = new URL(origin);
-      // Chrome extensions use chrome-extension://<extension-id> as their origin.
-      // Authentication still remains mandatory for every RPC request.
-      if (parsed.protocol === 'chrome-extension:') return true;
       if (LocalAgentServer.ALLOWED_ORIGIN_HOSTS.has(parsed.hostname)) return true;
-      // Allow Cloud Run dev/preview environments when running in AI Studio sandbox
-      if (parsed.hostname.endsWith('.run.app')) return true;
       return false;
     } catch {
       return false;
@@ -178,11 +179,49 @@ export class LocalAgentServer {
         // CORS
         res.setHeader('Access-Control-Allow-Origin', origin || '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-ulab-token');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-ulab-token, MCP-Protocol-Version, Mcp-Method, Mcp-Name');
+        res.setHeader('Access-Control-Expose-Headers', 'MCP-Protocol-Version');
 
         if (req.method === 'OPTIONS') {
           res.writeHead(200);
           res.end();
+          return;
+        }
+
+        if (req.url === '/shutdown' && req.method === 'POST') {
+          const clientId = req.socket.remoteAddress || '127.0.0.1';
+          const provided = req.headers.authorization?.startsWith('Bearer ')
+            ? req.headers.authorization.slice(7).trim()
+            : String(req.headers['x-ulab-token'] || '').trim();
+          if (!this.checkRateLimit(clientId) || !this.token || provided !== this.token) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Unauthorized' }));
+            return;
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json', Connection:'close' });
+          res.end(JSON.stringify({ ok: true, message: 'ULAB Agent shutdown requested' }));
+          setImmediate(async () => {
+            try {
+              this.server?.closeAllConnections?.();
+              await this.stop();
+            } finally {
+              await this.onShutdown?.();
+            }
+          });
+          return;
+        }
+
+        if (req.url === '/mcp' && req.method === 'GET') {
+          res.writeHead(405, { 'Allow': 'POST', 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'ULAB MCP is request/response only; use POST /mcp' }));
+          return;
+        }
+
+        if (req.url === '/mcp' && req.method === 'POST') {
+          void this.mcpServer.handleHttp(req, res).catch((error: any) => {
+            if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'application/json' });
+            if (!res.writableEnded) res.end(JSON.stringify({ error: error?.message || 'MCP server error' }));
+          });
           return;
         }
 
@@ -191,7 +230,7 @@ export class LocalAgentServer {
           res.end(
             JSON.stringify({
               status: 'ok',
-              version: '1.0.0',
+              version: '3.10.0',
               hasActiveWorkspace: !!this.currentSession,
               workspace: this.currentSession?.workspaceName || null,
             })

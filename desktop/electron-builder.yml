@@ -1,0 +1,31 @@
+appId: com.ulab.desktop
+productName: ULAB
+icon: ulab.ico
+directories:
+  app: desktop
+  output: release-ulab-desktop-final
+  buildResources: desktop/build
+files:
+  - electron/**/*
+  - renderer/package.json
+  - renderer/dist/**/*
+extraResources:
+  - from: agent/dist
+    to: agent/dist
+    filter:
+      - "**/*"
+  - from: agent/package.json
+    to: agent/package.json
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  artifactName: ULAB-Setup-${version}-Windows-x64.exe
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  include: desktop/build/installer.nsh

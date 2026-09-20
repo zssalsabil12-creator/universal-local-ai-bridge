@@ -18,6 +18,7 @@ const args = process.argv.slice(2);
 let port = 19999;
 let initialWorkspace: string | undefined = undefined;
 let configuredToken: string | undefined = undefined;
+const shutdownRequested = args.includes('--shutdown');
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--port' && args[i + 1]) {
@@ -31,6 +32,31 @@ for (let i = 0; i < args.length; i++) {
     i++;
   }
 }
+
+if (shutdownRequested) {
+  const dataDir = process.env.LOCALAPPDATA || path.join(os.homedir(), '.ulab');
+  const tokenPath = path.join(dataDir, 'ULAB', 'agent.token');
+  if (!configuredToken) configuredToken = process.env.ULAB_TOKEN?.trim() || undefined;
+  if (!configuredToken) {
+    try { configuredToken = fs.readFileSync(tokenPath, 'utf8').trim() || undefined; } catch {}
+  }
+  if (!configuredToken) {
+    console.error('[ULAB Agent] Shutdown token unavailable');
+    process.exit(1);
+  }
+  fetch(`http://127.0.0.1:${port}/shutdown`, {
+    method:'POST',
+    headers:{ Authorization:'Bearer ' + configuredToken },
+  }).then(async response => {
+    console.log(`[ULAB Agent] Shutdown request: HTTP ${response.status}`);
+    process.exit(response.ok ? 0 : 1);
+  }).catch(error => {
+    console.error('[ULAB Agent] Shutdown request failed:', error?.message || error);
+    process.exit(1);
+  });
+} else if (args.includes('--mcp')) {
+  void import('./mcpStdio');
+} else {
 
 // Persist one local token per user profile so restarts do not require reconfiguration.
 // Explicit --token and ULAB_TOKEN always take precedence.
@@ -58,6 +84,7 @@ const server = new LocalAgentServer({
   token: configuredToken,
   port,
   initialWorkspaceRoot: initialWorkspace,
+  onShutdown: () => process.exit(0),
 });
 
 server.start().then(() => {
@@ -79,3 +106,5 @@ process.on('SIGINT', async () => {
   await server.stop();
   process.exit(0);
 });
+
+}

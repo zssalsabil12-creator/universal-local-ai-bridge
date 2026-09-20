@@ -1,0 +1,489 @@
+@import "tailwindcss";
+
+/* Keep Tailwind content discovery focused on source code. ULAB stores several
+   large local browser profiles beside the project; scanning those at build time
+   can stall production builds and is unnecessary for class generation. */
+@source not "../.runtime-chrome";
+@source not "../.runtime-chrome2";
+@source not "../.runtime-chrome3";
+@source not "../.runtime-chrome4";
+@source not "../.runtime-chrome5";
+@source not "../node_modules";
+@source not "../.git";
+@source not "../dist";
+@source not "../release";
+@source not "../installer-package";
+@source not "../test-project";
+@source not "../windows-runtime-test";
+@source not "../.installer-work2";
+
+@theme {
+  --font-sans: 'IBM Plex Sans Arabic', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  --color-cosmic-purple: #8b5cf6;
+  --color-cosmic-blue: #3b82f6;
+  --color-cosmic-pink: #ec4899;
+  --color-cosmic-cyan: #06b6d4;
+  --color-cosmic-indigo: #6366f1;
+  --color-cosmic-violet: #a855f7;
+  
+  --color-primary: #8b5cf6;
+  --color-primary-light: #a78bfa;
+  --color-primary-dark: #7c3aed;
+  --color-accent: #06b6d4;
+  --color-accent-light: #22d3ee;
+  --color-surface: #0a0a0f;
+  --color-surface-light: #111118;
+  --color-surface-lighter: #1a1a24;
+  --color-border: #2a2a3a;
+  --color-text: #e2e8f0;
+  --color-text-muted: #94a3b8;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a3a #111118;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #111118;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #2a2a3a;
+  border-radius: 3px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  background-color: #0a0a0f;
+  color: #e2e8f0;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Multi-layer Stars Background */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    /* Layer 1: Small stars */
+    radial-gradient(1px 1px at 50px 100px, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 150px 200px, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 250px 50px, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1px 1px at 350px 150px, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 450px 250px, rgba(255, 255, 255, 0.9), transparent),
+    /* Layer 2: Medium stars */
+    radial-gradient(2px 2px at 100px 300px, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(2px 2px at 300px 100px, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(2px 2px at 500px 400px, rgba(255, 255, 255, 0.7), transparent),
+    /* Layer 3: Bright stars with glow */
+    radial-gradient(3px 3px at 200px 400px, rgba(139, 92, 246, 0.8), transparent),
+    radial-gradient(3px 3px at 400px 200px, rgba(6, 182, 212, 0.8), transparent),
+    radial-gradient(3px 3px at 600px 500px, rgba(236, 72, 153, 0.8), transparent);
+  background-repeat: repeat;
+  background-size: 800px 600px;
+  animation: starsMove 300s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Nebula and Cosmic Clouds */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    /* Purple Nebula */
+    radial-gradient(ellipse at 20% 30%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+    /* Cyan Nebula */
+    radial-gradient(ellipse at 80% 70%, rgba(6, 182, 212, 0.12) 0%, transparent 50%),
+    /* Pink Nebula */
+    radial-gradient(ellipse at 50% 50%, rgba(236, 72, 153, 0.1) 0%, transparent 50%),
+    /* Blue Nebula */
+    radial-gradient(ellipse at 30% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
+  animation: nebulaFloat 60s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes starsMove {
+  from { transform: translateY(0); }
+  to { transform: translateY(-600px); }
+}
+
+@keyframes nebulaFloat {
+  0%, 100% { 
+    transform: translate(0, 0) scale(1);
+    opacity: 0.8;
+  }
+  50% { 
+    transform: translate(-20px, -20px) scale(1.1);
+    opacity: 1;
+  }
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 50%, #ec4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-border {
+  position: relative;
+  border-radius: 16px;
+  background: rgba(17, 17, 24, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.5), rgba(6, 182, 212, 0.5));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.glow {
+  box-shadow: 
+    0 0 30px rgba(139, 92, 246, 0.15),
+    0 0 60px rgba(6, 182, 212, 0.1);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { 
+    box-shadow: 
+      0 0 20px rgba(139, 92, 246, 0.2),
+      0 0 40px rgba(6, 182, 212, 0.1);
+  }
+  50% { 
+    box-shadow: 
+      0 0 30px rgba(139, 92, 246, 0.3),
+      0 0 60px rgba(6, 182, 212, 0.2);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.6s ease-out forwards;
+}
+
+.code-block {
+  font-family: 'JetBrains Mono', monospace;
+  direction: ltr;
+  text-align: left;
+}
+
+.grid-bg {
+  background-image: 
+    linear-gradient(rgba(139, 92, 246, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.dot-bg {
+  background-image: radial-gradient(rgba(139, 92, 246, 0.1) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+.hover-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-8px);
+  box-shadow: 
+    0 20px 40px rgba(139, 92, 246, 0.2),
+    0 0 60px rgba(6, 182, 212, 0.15);
+}
+
+.hover-scale {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.card-hover {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.05),
+    transparent
+  );
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.btn-primary:hover::before {
+  left: 100%;
+}
+
+* {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*:focus-visible {
+  outline: 2px solid rgba(139, 92, 246, 0.5);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(139, 92, 246, 0.3);
+  color: #fff;
+}
+
+/* ULAB Cosmic UI v2 — visual system */
+:root {
+  --ulab-bg: #05060d;
+  --ulab-panel: rgba(10, 13, 28, 0.78);
+  --ulab-panel-strong: rgba(13, 16, 34, 0.94);
+  --ulab-line: rgba(148, 163, 184, 0.12);
+  --ulab-line-strong: rgba(139, 92, 246, 0.30);
+}
+html { background: var(--ulab-bg); }
+body {
+  background:
+    radial-gradient(900px 520px at 10% -10%, rgba(139,92,246,.18), transparent 62%),
+    radial-gradient(760px 480px at 92% 4%, rgba(6,182,212,.13), transparent 58%),
+    radial-gradient(620px 520px at 52% 108%, rgba(236,72,153,.10), transparent 62%),
+    linear-gradient(180deg,#070815 0%,#05060d 48%,#060713 100%);
+}
+body::before {
+  opacity: .58;
+  background-image:
+    radial-gradient(circle at 14% 20%,rgba(255,255,255,.72) 0 1px,transparent 1.5px),
+    radial-gradient(circle at 67% 12%,rgba(255,255,255,.42) 0 1px,transparent 1.5px),
+    radial-gradient(circle at 82% 56%,rgba(34,211,238,.55) 0 1px,transparent 1.5px),
+    radial-gradient(circle at 26% 76%,rgba(167,139,250,.55) 0 1px,transparent 1.5px);
+  background-size: 240px 220px,310px 280px,370px 330px,430px 390px;
+  animation: ulab-star-drift 42s linear infinite;
+}
+@keyframes ulab-star-drift { from{transform:translate3d(0,0,0)} to{transform:translate3d(-45px,-70px,0)} }
+
+.glass-panel {
+  background: var(--ulab-panel);
+  border: 1px solid var(--ulab-line);
+  backdrop-filter: blur(18px) saturate(130%);
+  box-shadow: 0 22px 70px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.025);
+}
+.glass-panel-strong {
+  background: var(--ulab-panel-strong);
+  border: 1px solid var(--ulab-line);
+  backdrop-filter: blur(22px) saturate(135%);
+  box-shadow: 0 26px 90px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.03);
+}
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(110deg,#7c3aed,#8b5cf6 42%,#06b6d4);
+  box-shadow: 0 10px 28px rgba(124,58,237,.22);
+  transition: transform .25s ease,box-shadow .25s ease,filter .25s ease;
+}
+.btn-primary:hover { transform:translateY(-2px);box-shadow:0 16px 38px rgba(124,58,237,.32);filter:saturate(1.08); }
+.btn-primary::after {
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(100deg,transparent 25%,rgba(255,255,255,.18) 50%,transparent 75%);
+  transform:translateX(-120%);transition:transform .65s ease;
+}
+.btn-primary:hover::after { transform:translateX(120%); }
+.gradient-text {
+  background:linear-gradient(110deg,#c4b5fd 0%,#8b5cf6 28%,#22d3ee 65%,#f0abfc 100%);
+  background-size:180% 180%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  animation:ulab-gradient 8s ease infinite;
+}
+@keyframes ulab-gradient { 0%,100%{background-position:0% 50%} 50%{background-position:100% 55%} }
+
+.shimmer { position:relative;overflow:hidden; }
+.shimmer::after {
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.045) 50%,transparent 70%);
+  transform:translateX(-110%);animation:ulab-shimmer 3.8s ease-in-out infinite;
+}
+@keyframes ulab-shimmer { 0%,38%{transform:translateX(-110%)} 72%,100%{transform:translateX(110%)} }
+.hover-lift { transition:transform .3s ease,box-shadow .3s ease,border-color .3s ease; }
+.hover-lift:hover { transform:translateY(-6px);box-shadow:0 20px 46px rgba(0,0,0,.25),0 0 40px rgba(139,92,246,.10); }
+.card-hover { transition:transform .3s ease,border-color .3s ease,background-color .3s ease; }
+.card-hover:hover { transform:translateY(-4px);border-color:rgba(139,92,246,.32);background-color:rgba(18,22,42,.84); }
+*::-webkit-scrollbar { width:7px;height:7px; }
+*::-webkit-scrollbar-track { background:transparent; }
+*::-webkit-scrollbar-thumb { background:#252d4b;border-radius:999px; }
+*::-webkit-scrollbar-thumb:hover { background:#39446f; }
+*:focus-visible { outline:2px solid rgba(34,211,238,.72);outline-offset:2px; }
+::selection { background:rgba(139,92,246,.32);color:#fff; }
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important; }
+}
+.ulab-workspace { background: radial-gradient(circle at 50% -20%, rgba(139,92,246,.07), transparent 42%), #05060d; }
+.ulab-topbar { position: relative; z-index: 5; background: rgba(6,8,18,.82); border-bottom: 1px solid rgba(148,163,184,.10); backdrop-filter: blur(22px) saturate(140%); box-shadow: 0 12px 40px rgba(0,0,0,.20); }
+.ulab-topbar::after { content:''; position:absolute; left:0; right:0; bottom:-1px; height:1px; background:linear-gradient(90deg,transparent,rgba(139,92,246,.55),rgba(34,211,238,.42),transparent); opacity:.6; }
+.ulab-topbar-actions button { border:1px solid rgba(148,163,184,.10); background:rgba(17,20,39,.72); backdrop-filter:blur(10px); transition:transform .2s ease, border-color .2s ease, background-color .2s ease, box-shadow .2s ease; }
+.ulab-topbar-actions button:hover { transform:translateY(-1px); border-color:rgba(139,92,246,.30); background:rgba(25,30,57,.82); box-shadow:0 8px 22px rgba(0,0,0,.18); }
+.ulab-sidebar, .ulab-inspector { background:linear-gradient(180deg,rgba(10,13,28,.92),rgba(7,9,20,.90)); border-color:rgba(148,163,184,.10) !important; }
+.ulab-sidebar { box-shadow: inset -1px 0 rgba(255,255,255,.02), 12px 0 40px rgba(0,0,0,.10); }
+.ulab-inspector { box-shadow: inset 1px 0 rgba(255,255,255,.025), -14px 0 40px rgba(0,0,0,.12); }
+.ulab-sidebar-tabs, .ulab-inspector-tabs { background:rgba(8,11,24,.86); border-color:rgba(148,163,184,.09) !important; }
+.ulab-sidebar-tabs button, .ulab-inspector-tabs button { position:relative; min-width:74px; color:#73809c !important; }
+.ulab-sidebar-tabs button:hover, .ulab-inspector-tabs button:hover { background:rgba(139,92,246,.06); color:#dbe4ff !important; }
+.ulab-editor { position:relative; background:linear-gradient(180deg,rgba(8,10,21,.80),rgba(5,7,15,.96)); }
+.ulab-editor::before { content:''; position:absolute; inset:0; pointer-events:none; background:radial-gradient(600px 260px at 50% 0%,rgba(139,92,246,.07),transparent 70%); }
+
+/* ULAB Product UI v3 — refined desktop identity */
+.ulab-brand { display:flex; align-items:center; gap:9px; min-width:0; }
+.ulab-brand-mark { display:block; flex:0 0 auto; filter:drop-shadow(0 7px 20px rgba(56,189,248,.20)); }
+.ulab-brand-word { color:#f8fafc; font-weight:900; letter-spacing:.16em; font-size:15px; line-height:1; }
+.ulab-brand-compact .ulab-brand-word { font-size:12px; }
+.ulab-topbar-divider { width:1px; height:22px; background:linear-gradient(180deg,transparent,rgba(148,163,184,.18),transparent); }
+.ulab-nav-back { border:1px solid rgba(148,163,184,.08); background:rgba(10,13,28,.42); }
+.ulab-project-chip { display:flex; align-items:center; gap:8px; min-width:0; padding:6px 10px; border:1px solid rgba(148,163,184,.10); border-radius:11px; background:rgba(10,13,28,.50); box-shadow:inset 0 1px rgba(255,255,255,.025); }
+.ulab-project-chip-name { color:#e6edff; font-size:11px; font-weight:700; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ulab-status-pill { display:inline-flex; align-items:center; gap:6px; border:1px solid rgba(148,163,184,.10); border-radius:999px; padding:4px 8px; background:rgba(8,11,24,.72); font-size:9px; font-weight:800; letter-spacing:.04em; }
+.ulab-status-dot { width:6px; height:6px; border-radius:999px; background:#64748b; box-shadow:0 0 0 3px rgba(100,116,139,.08); }
+.ulab-status-dot.is-live { background:#34d399; box-shadow:0 0 0 3px rgba(52,211,153,.10),0 0 12px rgba(52,211,153,.38); }
+.ulab-status-dot.is-busy { background:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.10),0 0 12px rgba(245,158,11,.30); }
+.ulab-bridge-card { position:relative; overflow:hidden; border:1px solid rgba(129,140,248,.16); background:linear-gradient(180deg,rgba(20,25,54,.72),rgba(8,12,28,.70)); box-shadow:0 18px 48px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.03); }
+.ulab-bridge-card::before { content:''; position:absolute; inset:0; background:radial-gradient(420px 180px at 15% 0%,rgba(34,211,238,.08),transparent 70%),radial-gradient(320px 160px at 85% 100%,rgba(168,85,247,.08),transparent 72%); pointer-events:none; }
+.ulab-provider-grid button { position:relative; min-height:58px; border-color:rgba(148,163,184,.09); background:rgba(10,13,28,.56); }
+.ulab-provider-grid button:hover { transform:translateY(-1px); border-color:rgba(129,140,248,.26); background:rgba(18,23,48,.76); box-shadow:0 10px 24px rgba(0,0,0,.20); }
+.ulab-provider-grid button.is-selected { border-color:rgba(99,102,241,.50); background:linear-gradient(180deg,rgba(99,102,241,.16),rgba(10,13,28,.72)); box-shadow:0 0 0 1px rgba(99,102,241,.10),0 10px 24px rgba(79,70,229,.10); }
+.ulab-provider-grid button.is-selected::after { content:''; position:absolute; top:5px; right:5px; width:5px; height:5px; border-radius:999px; background:#67e8f9; box-shadow:0 0 10px rgba(103,232,249,.7); }
+.ulab-orbit-logo { position:relative; width:128px; height:128px; display:grid; place-items:center; }
+.ulab-orbit-logo > .ulab-brand { position:relative; z-index:3; width:88px; height:88px; justify-content:center; border:1px solid rgba(148,163,184,.11); border-radius:28px; background:linear-gradient(145deg,rgba(13,21,48,.94),rgba(12,9,34,.92)); box-shadow:0 18px 60px rgba(79,70,229,.18),inset 0 1px rgba(255,255,255,.06); }
+.ulab-orbit { position:absolute; inset:8px; border:1px solid rgba(99,102,241,.22); border-radius:50%; transform:rotate(-18deg); }
+.ulab-orbit-two { inset:18px -3px 18px; transform:rotate(54deg); border-color:rgba(34,211,238,.18); }
+.ulab-empty-state { animation:ulab-enter .55s ease-out both; }
+.ulab-eyebrow { width:max-content; padding:5px 9px; border:1px solid rgba(99,102,241,.20); border-radius:999px; background:rgba(99,102,241,.07); color:#8fa8ff; font-size:9px; font-weight:900; letter-spacing:.16em; }
+@keyframes ulab-enter { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+.ulab-inspector .ulab-inspector-tabs { padding:5px; gap:3px; }
+.ulab-inspector .ulab-inspector-tabs button { border-radius:8px; min-width:68px; padding-top:8px; padding-bottom:8px; }
+.ulab-inspector .ulab-inspector-tabs button:hover { background:rgba(99,102,241,.08); }
+.ulab-inspector .ulab-inspector-tabs button.text-indigo-400 { background:rgba(99,102,241,.12); }
+.ulab-sidebar .ulab-sidebar-tabs { padding:5px; gap:3px; }
+.ulab-sidebar .ulab-sidebar-tabs button { border-radius:8px; }
+.ulab-editor .code-block { border-left:1px solid rgba(148,163,184,.05); }
+.ulab-editor .code-block > div:first-child { background:rgba(6,9,20,.82) !important; }
+.ulab-topbar-actions button { min-height:32px; }
+.ulab-topbar-actions .ai-bridge-primary { background:linear-gradient(110deg,#4f46e5,#7c3aed 48%,#0891b2); border-color:rgba(129,140,248,.30); box-shadow:0 10px 28px rgba(79,70,229,.16); }
+.ulab-topbar-actions .ai-bridge-primary:hover { box-shadow:0 14px 34px rgba(79,70,229,.24); }
+@media (max-width:1200px) {
+  .ulab-topbar { gap:10px; }
+  .ulab-topbar-actions button { padding-left:9px; padding-right:9px; }
+  .ulab-project-chip-name { max-width:150px; }
+}
+
+.ulab-boot { position:relative; overflow:hidden; background:radial-gradient(520px 320px at 50% 42%,rgba(79,70,229,.16),transparent 70%),radial-gradient(340px 240px at 28% 64%,rgba(34,211,238,.08),transparent 72%),#05060d; }
+.ulab-boot::before,.ulab-boot::after { content:''; position:absolute; border-radius:999px; filter:blur(1px); pointer-events:none; }
+.ulab-boot::before { width:420px; height:420px; border:1px solid rgba(99,102,241,.13); animation:ulab-boot-orbit 12s linear infinite; }
+.ulab-boot::after { width:620px; height:260px; border:1px solid rgba(34,211,238,.08); transform:rotate(28deg); animation:ulab-boot-orbit 17s linear infinite reverse; }
+.ulab-boot > div { position:relative; z-index:2; }
+.ulab-boot-mark { width:108px; height:108px; margin:auto; display:grid; place-items:center; border-radius:32px; background:linear-gradient(145deg,rgba(14,23,52,.96),rgba(17,10,42,.92)); border:1px solid rgba(148,163,184,.12); box-shadow:0 28px 90px rgba(79,70,229,.20),inset 0 1px rgba(255,255,255,.07); animation:ulab-boot-float 4.5s ease-in-out infinite; }
+.ulab-boot-pulse { width:7px; height:7px; border-radius:50%; background:#34d399; box-shadow:0 0 0 4px rgba(52,211,153,.08),0 0 18px rgba(52,211,153,.42); animation:ulab-pulse 1.8s ease-in-out infinite; }
+@keyframes ulab-boot-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes ulab-pulse { 0%,100%{opacity:.45} 50%{opacity:1} }
+@keyframes ulab-boot-orbit { from{transform:rotate(0deg) translateX(5px) rotate(0deg)} to{transform:rotate(360deg) translateX(5px) rotate(-360deg)} }

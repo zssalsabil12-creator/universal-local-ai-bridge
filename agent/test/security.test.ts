@@ -319,9 +319,10 @@ async function runComprehensiveSecurityAudit() {
     // 6.1 Origin Validation
     assert(agentServer.isOriginAllowed('http://localhost:3000') === true, 'Allow localhost origin');
     assert(agentServer.isOriginAllowed('http://127.0.0.1:19998') === true, 'Allow 127.0.0.1 origin');
-    assert(agentServer.isOriginAllowed('chrome-extension://abcdefghijklmnop') === true, 'Allow Chrome extension origin for token-authenticated RPC');
+    assert(agentServer.isOriginAllowed('chrome-extension://abcdefghijklmnop') === false, 'Reject retired Chrome extension origin');
     assert(agentServer.isOriginAllowed('https://malicious-site.com') === false, 'Block malicious external origin');
     assert(agentServer.isOriginAllowed('https://evil-attacker.io') === false, 'Block untrusted web origin');
+    assert(agentServer.isOriginAllowed('https://example.run.app') === false, 'Reject arbitrary Cloud Run origin');
 
     // 6.2 Malformed RPC Messages
     const m1 = await agentServer.handleMessage(null);

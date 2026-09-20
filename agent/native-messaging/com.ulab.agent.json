@@ -1,9 +1,0 @@
-{
-  "name": "com.ulab.agent",
-  "description": "Universal Local AI Bridge - Local Agent",
-  "path": "C:\\Program Files\\ULAB\\ulab-agent.exe",
-  "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://EXTENSION_ID_HERE/"
-  ]
-}

@@ -7,6 +7,43 @@ export interface GitStatusSummary {
   staged: string[];
   untracked: string[];
   clean: boolean;
+  isRepository: boolean;
+  error?: string;
+}
+
+export function parseGitStatusOutput(stdout: string): GitStatusSummary {
+  const lines = stdout.split('\n').filter(Boolean);
+  let branch = '—';
+  const modified: string[] = [];
+  const staged: string[] = [];
+  const untracked: string[] = [];
+
+  for (const line of lines) {
+    if (line.startsWith('##')) {
+      branch = line.slice(2).trim().split('...')[0] || 'HEAD';
+      continue;
+    }
+    const code = line.slice(0, 2);
+    const file = line.slice(3).trim();
+    if (!file) continue;
+
+    if (code === '??') {
+      untracked.push(file);
+      continue;
+    }
+
+    if (code[0] && code[0] !== ' ') staged.push(file);
+    if (code[1] && code[1] !== ' ') modified.push(file);
+  }
+
+  return {
+    branch,
+    modified,
+    staged,
+    untracked,
+    clean: modified.length === 0 && staged.length === 0 && untracked.length === 0,
+    isRepository: true,
+  };
 }
 
 export class GitSecurityManager {
@@ -22,47 +59,20 @@ export class GitSecurityManager {
    * Safe read-only git status
    */
   public async getStatus(): Promise<GitStatusSummary> {
-    const res = await this.terminal.execute('git', ['status', '--porcelain', '-b']);
+    const res = await this.terminal.execute('git', ['status', '--porcelain=v1', '-b']);
     if (!res.success) {
       return {
-        branch: 'unknown',
+        branch: '—',
         modified: [],
         staged: [],
         untracked: [],
-        clean: true,
+        clean: false,
+        isRepository: false,
+        error: res.stderr || res.stdout || 'Git repository not detected',
       };
     }
 
-    const lines = res.stdout.split('\n').filter(Boolean);
-    let branch = 'main';
-    const modified: string[] = [];
-    const staged: string[] = [];
-    const untracked: string[] = [];
-
-    for (const line of lines) {
-      if (line.startsWith('##')) {
-        branch = line.replace('##', '').trim();
-        continue;
-      }
-      const code = line.slice(0, 2);
-      const file = line.slice(3).trim();
-
-      if (code === '??') {
-        untracked.push(file);
-      } else if (code.includes('M')) {
-        modified.push(file);
-      } else if (code.includes('A') || code.includes('D')) {
-        staged.push(file);
-      }
-    }
-
-    return {
-      branch,
-      modified,
-      staged,
-      untracked,
-      clean: modified.length === 0 && staged.length === 0 && untracked.length === 0,
-    };
+    return parseGitStatusOutput(res.stdout);
   }
 
   /**
