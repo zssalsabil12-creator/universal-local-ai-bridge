@@ -3,6 +3,7 @@ import type { LocalAgentServer } from './LocalAgentServer';
 
 const PROTOCOL_MODERN = '2026-07-28';
 const PROTOCOL_LEGACY = '2025-11-25';
+const ULAB_VERSION = '3.10.5';
 const MAX_BODY_BYTES = 1024 * 1024;
 
 export interface MCPToolDefinition {
@@ -159,7 +160,7 @@ export class ULABMCPServer {
         capabilities: { tools: { listChanged: false } },
         instructions: 'ULAB exposes workspace-scoped tools. Files are sandboxed to the selected workspace. Use files_propose for changes; direct write, delete, terminal and Git mutation operations remain outside the MCP tool surface.',
       }, {
-        'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: '3.10.4' },
+        'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: ULAB_VERSION },
       });
     }
 
@@ -167,7 +168,7 @@ export class ULABMCPServer {
       return jsonrpcResult(id, {
         protocolVersion: PROTOCOL_LEGACY,
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: 'ulab-local-agent', version: '3.10.4' },
+        serverInfo: { name: 'ulab-local-agent', version: ULAB_VERSION },
         instructions: 'ULAB exposes workspace-scoped tools. Use files_propose for changes; direct writes require the ULAB approval flow.',
       });
     }
@@ -186,7 +187,7 @@ export class ULABMCPServer {
         ttlMs: 300000,
         cacheScope: 'global',
       }, {
-        'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: '3.10.4' },
+        'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: ULAB_VERSION },
       });
     }
 
@@ -214,7 +215,7 @@ export class ULABMCPServer {
           action: result.action || action,
           data: result.data,
         }), {
-          'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: '3.10.4' },
+          'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: ULAB_VERSION },
         });
       }
 
@@ -222,7 +223,7 @@ export class ULABMCPServer {
         action: result?.action || action,
         error: result?.error || { code: 'EXECUTION_FAILED', message: 'ULAB tool call failed' },
       }, true), {
-        'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: '3.10.4' },
+        'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: ULAB_VERSION },
       });
     }
 

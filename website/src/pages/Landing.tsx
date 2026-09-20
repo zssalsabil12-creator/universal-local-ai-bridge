@@ -17,7 +17,7 @@ import LegalModal from '../components/LegalModal';
 
 function Navbar({ onLaunch }: { onLaunch: () => void }) {
   const { t } = useLanguage();
-  const downloadUrl = 'https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.4/ULAB-Setup-3.10.4-Windows-x64.exe';
+  const downloadUrl = 'https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.5/ULAB-Setup-3.10.5-Windows-x64.exe';
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -59,7 +59,7 @@ function Navbar({ onLaunch }: { onLaunch: () => void }) {
 
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
-            <a href={downloadUrl} download="ULAB-Setup-3.10.4-Windows-x64.exe" className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#111827]/80 border border-cyan-400/25 text-cyan-200 text-sm font-bold hover:border-cyan-300/50 hover:bg-cyan-400/10 transition-all">
+            <a href={downloadUrl} download="ULAB-Setup-3.10.5-Windows-x64.exe" className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#111827]/80 border border-cyan-400/25 text-cyan-200 text-sm font-bold hover:border-cyan-300/50 hover:bg-cyan-400/10 transition-all">
               <Download className="w-4 h-4" />
               {t('nav.download')}
             </a>
@@ -87,7 +87,7 @@ function Navbar({ onLaunch }: { onLaunch: () => void }) {
                   {link.label}
                 </a>
               ))}
-              <a href={downloadUrl} download="ULAB-Setup-3.10.4-Windows-x64.exe" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl border border-cyan-400/25 bg-cyan-400/10 text-cyan-200 text-sm font-bold">
+              <a href={downloadUrl} download="ULAB-Setup-3.10.5-Windows-x64.exe" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl border border-cyan-400/25 bg-cyan-400/10 text-cyan-200 text-sm font-bold">
                 <Download className="w-4 h-4" />
                 {t('nav.download')}
               </a>
@@ -130,7 +130,7 @@ function Hero({ onLaunch }: { onLaunch: () => void }) {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20">
-            <a href="https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.4/ULAB-Setup-3.10.4-Windows-x64.exe" download="ULAB-Setup-3.10.4-Windows-x64.exe" className="px-10 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 text-white font-bold text-lg hover:shadow-2xl hover:shadow-cyan-500/30 transition-all animate-pulse-glow">
+            <a href="https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.5/ULAB-Setup-3.10.5-Windows-x64.exe" download="ULAB-Setup-3.10.5-Windows-x64.exe" className="px-10 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 text-white font-bold text-lg hover:shadow-2xl hover:shadow-cyan-500/30 transition-all animate-pulse-glow">
               <span className="flex items-center gap-3">
                 <Download className="w-6 h-6" />
                 {t('hero.download')}
@@ -244,7 +244,7 @@ function StatsSection() {
   const stats = [
     { value: 'Local', label: t('stats.local'), icon: <Lock className="w-8 h-8" />, gradient: 'from-green-400 to-emerald-500' },
     { value: 'Multi', label: t('stats.providers'), icon: <Globe className="w-8 h-8" />, gradient: 'from-purple-400 to-pink-500' },
-    { value: '├ó╦å┼¥', label: t('stats.projects'), icon: <Cpu className="w-8 h-8" />, gradient: 'from-cyan-400 to-blue-500' },
+    { value: '∞', label: t('stats.projects'), icon: <Cpu className="w-8 h-8" />, gradient: 'from-cyan-400 to-blue-500' },
     { value: 'Local', label: t('stats.servers'), icon: <Shield className="w-8 h-8" />, gradient: 'from-indigo-400 to-violet-500' },
   ];
 
@@ -561,7 +561,7 @@ function RoadmapSection() {
 
 function CTASection({ onLaunch }: { onLaunch: () => void }) {
   const { t } = useLanguage();
-  const downloadUrl = 'https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.4/ULAB-Setup-3.10.4-Windows-x64.exe';
+  const downloadUrl = 'https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.5/ULAB-Setup-3.10.5-Windows-x64.exe';
 
   return (
     <section className="py-32 relative">
@@ -612,7 +612,7 @@ function CTASection({ onLaunch }: { onLaunch: () => void }) {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <motion.a
                   href={downloadUrl}
-                  download="ULAB-Setup-3.10.4-Windows-x64.exe"
+                  download="ULAB-Setup-3.10.5-Windows-x64.exe"
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}

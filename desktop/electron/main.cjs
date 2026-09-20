@@ -13,6 +13,9 @@ const { getAIToolDisposition, extractAIToolRequest, isTrustedAIUrl, createAITool
 const { isUsableAIWebContents } = require('./aiBridgeRuntime.cjs');
 const { buildAIInteractionScript, buildAIProbeScript, buildAssistantTextScript } = require('./aiBridgeDom.cjs');
 let agentProcess = null;
+let agentStartInFlight = null;
+let agentRestartAttempts = 0;
+let shuttingDown = false;
 let bridgeAgentSocket = null;
 let bridgeAgentConnecting = null;
 let aiBridgeState = 'IDLE';
@@ -67,25 +70,89 @@ function agentEntryPath() {
   return path.join(__dirname, '..', '..', 'agent', 'dist', 'index.js');
 }
 
-function startLocalAgent() {
-  if (agentProcess && !agentProcess.killed) return;
-  const entry = agentEntryPath();
-  if (!fs.existsSync(entry)) {
-    sendToRenderer('agent-log', 'Agent executable not found: ' + entry);
-    return;
-  }
-  const { spawn } = require('child_process');
-  const packagedBinary = app.isPackaged && entry.toLowerCase().endsWith('.exe');
-  const command = packagedBinary ? entry : process.execPath;
-  const args = packagedBinary ? ['--port', '19999'] : [entry, '--port', '19999'];
-  const env = { ...process.env };
-  if (!packagedBinary) env.ELECTRON_RUN_AS_NODE = '1';
-  agentProcess = spawn(command, args, { env, windowsHide: true, detached: false, stdio: 'ignore' });
-  agentProcess.on('error', error => { sendToRenderer('agent-log', 'Agent start error: ' + error.message); agentProcess = null; });
-  agentProcess.on('exit', (code, signal) => { agentProcess = null; sendToRenderer('agent-status', { running:false, code, signal }); });
+function checkLocalAgentHealth() {
+  return new Promise(resolve => {
+    const req = http.get(agentHealthUrl, res => {
+      res.resume();
+      res.on('end', () => resolve(res.statusCode === 200));
+    });
+    req.on('error', () => resolve(false));
+    req.setTimeout(1500, () => { req.destroy(); resolve(false); });
+  });
+}
+
+async function startLocalAgent() {
+  if (shuttingDown) return false;
+  if (agentProcess && !agentProcess.killed) return true;
+  if (agentStartInFlight) return agentStartInFlight;
+
+  agentStartInFlight = (async () => {
+    if (await checkLocalAgentHealth()) {
+      agentRestartAttempts = 0;
+      sendToRenderer('agent-status', { running:true, healthy:true });
+      return true;
+    }
+
+    const entry = agentEntryPath();
+    if (!fs.existsSync(entry)) {
+      const message = 'Agent executable not found: ' + entry;
+      sendToRenderer('agent-log', message);
+      return false;
+    }
+
+    const { spawn } = require('child_process');
+    const packagedBinary = app.isPackaged && entry.toLowerCase().endsWith('.exe');
+    const command = packagedBinary ? entry : process.execPath;
+    const args = packagedBinary ? ['--port', '19999'] : [entry, '--port', '19999'];
+    const env = { ...process.env };
+    if (!packagedBinary) env.ELECTRON_RUN_AS_NODE = '1';
+
+    try {
+      agentProcess = spawn(command, args, {
+        env,
+        cwd: path.dirname(entry),
+        windowsHide: true,
+        detached: false,
+        stdio: 'ignore',
+      });
+    } catch (error) {
+      agentProcess = null;
+      sendToRenderer('agent-log', 'Agent spawn error: ' + error.message);
+      return false;
+    }
+
+    agentProcess.once('error', error => {
+      sendToRenderer('agent-log', 'Agent start error: ' + error.message);
+      agentProcess = null;
+    });
+    agentProcess.once('exit', (code, signal) => {
+      agentProcess = null;
+      sendToRenderer('agent-status', { running:false, code, signal });
+      if (!shuttingDown && agentRestartAttempts < 3) {
+        agentRestartAttempts += 1;
+        setTimeout(() => { void startLocalAgent(); }, 1000);
+      }
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 900));
+    const healthy = await checkLocalAgentHealth();
+    if (healthy) {
+      agentRestartAttempts = 0;
+      sendToRenderer('agent-status', { running:true, healthy:true });
+      return true;
+    }
+    sendToRenderer('agent-log', 'Agent started but health check is not ready yet.');
+    return true;
+  })().finally(() => {
+    agentStartInFlight = null;
+  });
+
+  return agentStartInFlight;
 }
 
 function stopLocalAgent() {
+  shuttingDown = true;
+  closeAgentSocket();
   if (!agentProcess) return;
   try { agentProcess.kill(); } catch {}
   agentProcess = null;
@@ -603,7 +670,7 @@ ipcMain.handle('mcp-config', async () => ({
 ipcMain.handle('mcp-diagnostics', async () => {
   const discover = await callMCP('server/discover', 'server/discover', {
     _meta:{
-      'io.modelcontextprotocol/clientInfo':{name:'ULAB Desktop',version:'3.10.4'},
+      'io.modelcontextprotocol/clientInfo':{name:'ULAB Desktop',version:'3.10.5'},
       'io.modelcontextprotocol/clientCapabilities':{},
     },
   });
