@@ -16,7 +16,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 
 const INSTALLER_URL = 'https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.5/ULAB-Setup-3.10.5-Windows-x64.exe';
 const VERSION = '3.10.5';
-const INSTALLER_SIZE = '~235 MB';
+const INSTALLER_SIZE = '~122 MB';
 
 export default function DownloadSection() {
   const { t } = useLanguage();
