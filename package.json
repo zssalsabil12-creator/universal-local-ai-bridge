@@ -19,7 +19,7 @@
     "agent:test": "npm --prefix agent test",
     "desktop:check": "npm --prefix desktop run check",
     "verify": "npm run website:check && npm run renderer:typecheck && npm run renderer:permission-check && npm run renderer:build && npm run agent:build && npm run agent:test && npm run desktop:check",
-    "desktop:build": "npm run renderer:build && npm run agent:build && npm run agent:exe && npm run desktop:check && npx electron-builder --config desktop/electron-builder.yml --win nsis"
+    "desktop:build": "npm run renderer:build && npm run agent:build && npm run agent:exe && npm run desktop:check && npx electron-builder --publish never --config desktop/electron-builder.yml --win nsis"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
