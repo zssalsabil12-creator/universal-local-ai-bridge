@@ -50,6 +50,9 @@ release-ulab-desktop-final/
 x.text
 _archive/
 desktop/renderer/src/components/*.clean
+# Electron Builder resources required for reproducible Windows releases
+!desktop/build/
+!desktop/build/**
 website/downloads/ULAB.exe
 website/downloads/ULAB.exe.*
 website/downloads/SHA256.txt
