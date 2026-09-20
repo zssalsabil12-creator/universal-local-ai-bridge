@@ -47,6 +47,7 @@ web-app/
 test-project/
 release-ulab-desktop/
 release-ulab-desktop-final/
+release-ulab-desktop-*/
 x.text
 _archive/
 desktop/renderer/src/components/*.clean

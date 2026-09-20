@@ -5,10 +5,10 @@ ULAB is a privacy-first system that connects online AI conversations with a user
 ## Repository map
 
 website/
-Public website: product pages, documentation, legal pages, advertising and downloads.
+Public Vite website: product presentation, documentation, legal pages, advertising and the Windows Desktop download.
 
 web-app/
-Browser application: workspace explorer, context, AI bridge UI, tasks, diffs, approvals, Git, terminal and tests.
+Legacy browser workspace archived under _archive/legacy-web-app; it is not part of the product runtime.
 
 desktop/
 Windows Desktop shell: Electron, embedded online AI sessions, automatic AI-to-local bridge, desktop IPC and packaging.
@@ -21,11 +21,9 @@ Minimal contracts shared by components.
 
 ## The important distinction
 
-The Website is not the Web App.
-The Web App is not the Desktop shell.
-The Desktop shell is not the Agent.
+The Website is the public distribution layer. The Desktop application is the product runtime, and the Agent is its local authority.
 
-Desktop may load the Web App UI, but that does not change ownership: Electron code stays in desktop/, while the Web App remains independently buildable and deployable.
+The Desktop does not depend on the legacy Web App. Its renderer lives in desktop/renderer/ and is packaged inside the Windows application.
 
 ## Intended Desktop flow
 
@@ -47,8 +45,8 @@ No Chrome extension, Side Panel, Native Messaging, or manual copy/paste is part 
 ## Commands
 
 npm run website:check
-npm run web-app:typecheck
-npm run web-app:build
+npm --prefix website run typecheck
+npm --prefix website run build
 npm run agent:build
 npm run agent:test
 npm run desktop:check
@@ -64,4 +62,4 @@ Protected writes, deletes and execution remain subject to ULAB approval/security
 
 ## Current verification status
 
-The separated Web App production build and Desktop syntax checks must be treated independently from the final Desktop runtime/installer test. Do not mark the full product complete until the Desktop runtime path and packaged artifact have been tested.
+The public website build and the Desktop product build are separate gates. Full release readiness requires the Desktop runtime, bundled Agent, embedded AI session path, installer and website download artifact to be verified.

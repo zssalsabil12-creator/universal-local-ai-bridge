@@ -244,6 +244,7 @@ export class LocalAgentServer {
 
       this.wss = new WebSocket.Server({
         server: this.server,
+        maxPayload: 1024 * 1024, // 1MB limit
         verifyClient: (info, callback) => {
           const origin = info.origin;
           if (origin && !this.isOriginAllowed(origin)) {
@@ -256,38 +257,40 @@ export class LocalAgentServer {
 
       this.wss.on('connection', (ws: WebSocket.WebSocket, req) => {
         const remoteIp = req.socket.remoteAddress || '127.0.0.1';
+        let authenticated = !this.token; // If no token configured, auto-authenticated
 
         ws.on('message', async (data: WebSocket.RawData) => {
           try {
             const raw = data.toString('utf-8');
+            if (raw.length > 1024 * 1024) {
+              ws.send(JSON.stringify({success:false,error:{code:'PAYLOAD_TOO_LARGE',message:'Message exceeds 1MB limit'}}));
+              ws.close();
+              return;
+            }
             let parsed: any;
             try {
               parsed = JSON.parse(raw);
             } catch {
-              ws.send(
-                JSON.stringify({
-                  success: false,
-                  error: {
-                    code: 'INVALID_REQUEST',
-                    message: 'Malformed JSON in request payload',
-                  },
-                })
-              );
+              ws.send(JSON.stringify({success:false,error:{code:'INVALID_REQUEST',message:'Malformed JSON'}}));
               return;
+            }
+
+            // Require valid token in first message if not yet authenticated
+            if (!authenticated) {
+              const msgToken = parsed.token;
+              if (msgToken && msgToken === this.token) {
+                authenticated = true;
+              } else {
+                ws.send(JSON.stringify({requestId:parsed.requestId,success:false,error:{code:'UNAUTHORIZED',message:'Invalid or missing security token'}}));
+                ws.close();
+                return;
+              }
             }
 
             const response = await this.handleMessage(parsed, remoteIp);
             ws.send(JSON.stringify(response));
           } catch (err: any) {
-            ws.send(
-              JSON.stringify({
-                success: false,
-                error: {
-                  code: 'EXECUTION_FAILED',
-                  message: err?.message || 'Server error processing request',
-                },
-              })
-            );
+            ws.send(JSON.stringify({success:false,error:{code:'EXECUTION_FAILED',message:err?.message||'Server error'}}));
           }
         });
       });
