@@ -492,7 +492,7 @@ body::before {
 /* ULAB Professional UI v4 */
 :root{--ulab-bg:#0d1117;--ulab-bg-elevated:#11161d;--ulab-surface:#151b23;--ulab-surface-2:#1a212b;--ulab-surface-3:#202834;--ulab-border:#2a3441;--ulab-border-strong:#364252;--ulab-text:#eef2f6;--ulab-text-muted:#9aa7b6;--ulab-text-subtle:#6f7d8d;--ulab-accent:#4f7fd6;--ulab-accent-strong:#5e8ee6;--ulab-accent-soft:rgba(79,127,214,.13);--ulab-shadow:0 12px 32px rgba(0,0,0,.22)}
 html,body{background:var(--ulab-bg)!important;color:var(--ulab-text);font-family:"IBM Plex Sans Arabic","Segoe UI",system-ui,sans-serif}
-body{overflow:hidden;background:var(--ulab-bg)!important}
+body{overflow-x:hidden;overflow-y:auto;background:var(--ulab-bg)!important}
 body::before,body::after{display:none!important}
 *{scrollbar-color:#394454 transparent}
 *::-webkit-scrollbar-track{background:transparent}

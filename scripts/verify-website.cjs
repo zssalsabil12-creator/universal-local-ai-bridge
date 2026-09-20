@@ -10,10 +10,12 @@ const releaseDownloadUrl = 'https://github.com/zssalsabil12-creator/universal-lo
 const indexHtml = fs.readFileSync(indexFile, 'utf8');
 const landingSource = fs.readFileSync(path.join(website, 'src', 'pages', 'Landing.tsx'), 'utf8');
 const downloadComponent = fs.readFileSync(path.join(website, 'src', 'components', 'DownloadSection.tsx'), 'utf8');
+const websiteCss = fs.readFileSync(path.join(website, 'src', 'index.css'), 'utf8');
 
 if (!landingSource.includes(releaseDownloadUrl)) throw new Error('LANDING_RELEASE_DOWNLOAD_MISSING');
 if (!downloadComponent.includes(releaseDownloadUrl)) throw new Error('DOWNLOAD_COMPONENT_RELEASE_MISSING');
 if (!landingSource.includes('AdContainer')) throw new Error('AD_SPACE_SUPPORT_MISSING');
+if (!/body\{overflow-x:hidden;overflow-y:auto;/.test(websiteCss)) throw new Error('WEBSITE_VERTICAL_SCROLL_DISABLED');
 
 for (const bad of ['â€”', 'Â·', 'â†', 'Ã', 'Â']) {
   if (indexHtml.includes(bad)) throw new Error('MOJIBAKE_' + bad);
