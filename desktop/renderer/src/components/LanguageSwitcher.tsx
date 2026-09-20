@@ -14,10 +14,10 @@ export default function LanguageSwitcher() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#111118] border border-[#2a2a3a] hover:border-indigo-500/50 transition-colors"
-        aria-label="Change language"
+        aria-label={languageInfo[language].nativeName}
       >
         <Globe className="w-4 h-4 text-[#94a3b8]" />
-        <span className="text-sm">{languageInfo[language].flag}</span>
+        <span className="inline-flex h-5 min-w-6 items-center justify-center rounded border border-white/[0.08] bg-white/[0.03] px-1 text-[9px] font-bold tracking-[0.08em] text-[#aab7d0]">{language.toUpperCase()}</span>
         <span className="text-sm text-[#94a3b8] hidden sm:inline">{languageInfo[language].nativeName}</span>
       </button>
 
@@ -43,8 +43,8 @@ export default function LanguageSwitcher() {
                     isSelected ? 'bg-indigo-500/10' : ''
                   }`}
                 >
-                  <span className="text-xl">{info.flag}</span>
-                  <div className="flex-1 text-left">
+                  <span className="inline-flex h-7 min-w-8 items-center justify-center rounded border border-white/[0.08] bg-white/[0.03] px-1 text-[10px] font-bold tracking-[0.08em] text-[#aab7d0]">{lang.toUpperCase()}</span>
+                  <div className="flex-1 text-start">
                     <div className="text-sm font-medium text-white">{info.nativeName}</div>
                     <div className="text-xs text-[#94a3b8]">{info.name}</div>
                   </div>

@@ -159,7 +159,7 @@ export class ULABMCPServer {
         capabilities: { tools: { listChanged: false } },
         instructions: 'ULAB exposes workspace-scoped tools. Files are sandboxed to the selected workspace. Use files_propose for changes; direct write, delete, terminal and Git mutation operations remain outside the MCP tool surface.',
       }, {
-        'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: '3.10.3' },
+        'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: '3.10.4' },
       });
     }
 
@@ -167,7 +167,7 @@ export class ULABMCPServer {
       return jsonrpcResult(id, {
         protocolVersion: PROTOCOL_LEGACY,
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: 'ulab-local-agent', version: '3.10.3' },
+        serverInfo: { name: 'ulab-local-agent', version: '3.10.4' },
         instructions: 'ULAB exposes workspace-scoped tools. Use files_propose for changes; direct writes require the ULAB approval flow.',
       });
     }
@@ -186,7 +186,7 @@ export class ULABMCPServer {
         ttlMs: 300000,
         cacheScope: 'global',
       }, {
-        'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: '3.10.3' },
+        'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: '3.10.4' },
       });
     }
 
@@ -214,7 +214,7 @@ export class ULABMCPServer {
           action: result.action || action,
           data: result.data,
         }), {
-          'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: '3.10.3' },
+          'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: '3.10.4' },
         });
       }
 
@@ -222,7 +222,7 @@ export class ULABMCPServer {
         action: result?.action || action,
         error: result?.error || { code: 'EXECUTION_FAILED', message: 'ULAB tool call failed' },
       }, true), {
-        'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: '3.10.3' },
+        'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: '3.10.4' },
       });
     }
 

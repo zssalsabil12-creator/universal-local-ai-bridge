@@ -603,7 +603,7 @@ ipcMain.handle('mcp-config', async () => ({
 ipcMain.handle('mcp-diagnostics', async () => {
   const discover = await callMCP('server/discover', 'server/discover', {
     _meta:{
-      'io.modelcontextprotocol/clientInfo':{name:'ULAB Desktop',version:'3.10.3'},
+      'io.modelcontextprotocol/clientInfo':{name:'ULAB Desktop',version:'3.10.4'},
       'io.modelcontextprotocol/clientCapabilities':{},
     },
   });

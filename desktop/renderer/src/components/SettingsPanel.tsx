@@ -1,9 +1,11 @@
-import { useState } from 'react';
-import { Settings as SettingsIcon, Moon, Globe, Shield, Cpu, Save, RotateCcw, CheckCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
+import { Language, languageInfo } from '../i18n/translations';
+import { Settings as SettingsIcon, Globe, Shield, Cpu, Save, RotateCcw, CheckCircle } from 'lucide-react';
 
 interface Settings {
   theme: 'dark' | 'light';
-  language: 'ar' | 'en';
+  language: Language;
   autoSave: boolean;
   maxContextFiles: number;
   maxContextLines: number;
@@ -29,10 +31,16 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 export default function SettingsPanel({ settings, onSettingsChange }: SettingsPanelProps) {
+  const { language, setLanguage, t } = useLanguage();
   const [localSettings, setLocalSettings] = useState(settings);
+
+  useEffect(() => {
+    setLocalSettings(prev => ({ ...prev, language }));
+  }, [language]);
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
+    setLanguage(localSettings.language);
     onSettingsChange(localSettings);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -46,7 +54,7 @@ export default function SettingsPanel({ settings, onSettingsChange }: SettingsPa
     <div className="p-4 h-full overflow-y-auto">
       <div className="flex items-center gap-2 mb-6">
         <SettingsIcon className="w-5 h-5 text-indigo-400" />
-        <h3 className="text-lg font-bold">الإعدادات</h3>
+        <h3 className="text-lg font-bold">{t('workspace.settings')}</h3>
       </div>
 
       {/* General */}
@@ -60,11 +68,12 @@ export default function SettingsPanel({ settings, onSettingsChange }: SettingsPa
             <span className="text-xs text-[#94a3b8]">اللغة</span>
             <select
               value={localSettings.language}
-              onChange={e => setLocalSettings({ ...localSettings, language: e.target.value as 'ar' | 'en' })}
+              onChange={e => setLocalSettings({ ...localSettings, language: e.target.value as Language })}
               className="px-2 py-1 rounded bg-[#0a0a0f] border border-[#2a2a3a] text-xs text-white"
             >
-              <option value="ar">العربية</option>
-              <option value="en">English</option>
+              {(['ar', 'en', 'es', 'fr', 'ko', 'zh'] as Language[]).map(langCode => (
+                <option key={langCode} value={langCode}>{languageInfo[langCode].nativeName}</option>
+              ))}
             </select>
           </div>
           <div className="flex items-center justify-between">

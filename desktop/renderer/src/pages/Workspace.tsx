@@ -37,6 +37,8 @@ import CurrentLocalAgentStatusModal from '../components/CurrentLocalAgentStatusM
 import { loadMemory, getProjectMemory, saveMemory, generateMemoryContext, ProjectMemory } from '../utils/localMemory';
 import BrandMark from '../components/BrandMark';
 import { localAgent, useAgentConnection, AuditLogEntry, FileEntryInfo, GitStatus } from '../utils/localAgent';
+import { useLanguage } from '../i18n/LanguageContext';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 
 // ============ FILE TREE COMPONENT ============
@@ -526,6 +528,7 @@ function getPermissionKeyForAIAction(action: string): keyof PermissionConfig['gl
 
 // ============ MAIN WORKSPACE ============
 export default function Workspace({ onBack }: { onBack: () => void }) {
+  const { t } = useLanguage();
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [projectIndex, setProjectIndex] = useState<ProjectIndex | null>(null);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -996,7 +999,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
         <div className="flex items-center gap-3 min-w-[155px]">
           <BrandMark size={30} />
           <div className="hidden md:block leading-tight">
-            <span className="block text-[11px] font-black tracking-[0.18em] text-white">WORKSPACE</span>
+            <span className="block text-[11px] font-black tracking-[0.18em] text-white">{t('workspace.title').toUpperCase()}</span>
             <span className="block text-[9px] text-[#60708f] mt-0.5">Universal Local AI Bridge</span>
           </div>
         </div>
@@ -1080,6 +1083,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
           <button onClick={() => setShowShortcuts(true)} className="ulab-icon-button" title="اختصارات لوحة المفاتيح" aria-label="اختصارات لوحة المفاتيح">
             <Keyboard className="w-4 h-4" />
           </button>
+          <LanguageSwitcher />
           <button onClick={() => setIsFullscreen(!isFullscreen)} className="p-1.5 rounded hover:bg-[#252530] transition-colors text-[#94a3b8]">
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
@@ -1428,9 +1432,9 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
             agentConnection.status === 'connecting' ? 'bg-yellow-400 animate-pulse' :
             'bg-red-400'
           }`}></div>
-          {agentConnection.status === 'connected' ? 'Agent Connected' :
+          {agentConnection.status === 'connected' ? t('workspace.connected') :
            agentConnection.status === 'connecting' ? 'Connecting...' :
-           'Disconnected'}
+           t('workspace.disconnected')}
         </span>
         <span className="flex items-center gap-1">
           <Shield className="w-3 h-3 text-green-400" />
@@ -1446,7 +1450,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
           <Shield className="w-3 h-3" />
           {permissionMode === 'readonly' ? 'وضع القراءة' : permissionMode === 'assisted' ? 'بمساعدة' : 'وكيل'}
         </span>
-        <span>ULAB 3.10.3</span>
+        <span>ULAB 3.10.4</span>
         <span className="hidden sm:flex items-center gap-2 text-[#4a5568]">
           <span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+O</span> فتح
           <span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+F</span> بحث
