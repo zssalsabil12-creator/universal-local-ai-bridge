@@ -1,6 +1,6 @@
 {
   "name": "ulab-desktop-renderer",
-  "version": "3.10.0",
+  "version": "3.10.1",
   "private": true,
   "description": "ULAB Desktop workspace renderer",
   "type": "module",

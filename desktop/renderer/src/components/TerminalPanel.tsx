@@ -20,7 +20,7 @@ function now() {
 
 export default function TerminalPanel({ permissionMode, connected, onExecuteCommand }: TerminalPanelProps) {
   const [entries, setEntries] = useState<TerminalEntry[]>([
-    { type: 'info', content: 'ULAB Terminal — Local Agent sandbox · v3.10.0', timestamp: now() },
+    { type: 'info', content: 'ULAB Terminal — Local Agent sandbox · v3.10.1', timestamp: now() },
   ]);
   const [input, setInput] = useState('');
   const [isRunning, setIsRunning] = useState(false);

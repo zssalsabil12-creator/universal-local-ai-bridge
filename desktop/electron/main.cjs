@@ -563,13 +563,41 @@ async function openAISession(providerId, customUrl = '') {
   });
   aiView.webContents.on('did-navigate', () => { lastProcessedToolBlock = ''; });
   resizeAIView();
-  try {
-    await Promise.race([
-      aiView.webContents.loadURL(targetUrl),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('AI_PAGE_LOAD_TIMEOUT')), 20000))
-    ]);
-  } catch (error) {
-    const message = error?.message || 'Unable to load AI page';
+  const pageLoad = new Promise(resolve => {
+    let settled = false;
+    const cleanup = () => {
+      aiView?.webContents.removeListener('did-finish-load', onFinish);
+      aiView?.webContents.removeListener('did-fail-load', onFail);
+    };
+    const finish = result => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      clearTimeout(timer);
+      resolve(result);
+    };
+    const onFinish = () => finish({ ok:true, complete:true });
+    const onFail = (_event, code, desc, isMainFrame) => {
+      if (!isMainFrame) return;
+      finish({ ok:false, error:desc || String(code || 'AI_PAGE_LOAD_FAILED') });
+    };
+    const timer = setTimeout(() => {
+      if (isUsableAIWebContents(aiView)) {
+        finish({ ok:true, complete:false, slow:true });
+      } else {
+        finish({ ok:false, error:'AI_PAGE_LOAD_TIMEOUT' });
+      }
+    }, 12000);
+    aiView.webContents.once('did-finish-load', onFinish);
+    aiView.webContents.once('did-fail-load', onFail);
+    void aiView.webContents.loadURL(targetUrl).catch(error => {
+      finish({ ok:false, error:error?.message || 'Unable to load AI page' });
+    });
+  });
+
+  const loadResult = await pageLoad;
+  if (!loadResult.ok) {
+    const message = loadResult.error || 'Unable to load AI page';
     sendToRenderer('ai-session-status', { provider:providerId, status:'error', error:message });
     closeAISession();
     return { ok:false, error:message };
@@ -578,7 +606,14 @@ async function openAISession(providerId, customUrl = '') {
     closeAISession();
     return { ok:false, error:'AI_PAGE_NOT_READY' };
   }
-  return { provider:providerId, name:p.name, url:aiView.webContents.getURL() || targetUrl, ready:true };
+  return {
+    provider:providerId,
+    name:p.name,
+    url:aiView.webContents.getURL() || targetUrl,
+    ready:true,
+    loadingComplete:loadResult.complete === true,
+    slowLoad:loadResult.slow === true
+  };
 }
 
 function closeAISession() {
@@ -681,7 +716,7 @@ ipcMain.handle('mcp-config', async () => ({
 ipcMain.handle('mcp-diagnostics', async () => {
   const discover = await callMCP('server/discover', 'server/discover', {
     _meta:{
-      'io.modelcontextprotocol/clientInfo':{name:'ULAB Desktop',version:'3.10.0'},
+      'io.modelcontextprotocol/clientInfo':{name:'ULAB Desktop',version:'3.10.1'},
       'io.modelcontextprotocol/clientCapabilities':{},
     },
   });
