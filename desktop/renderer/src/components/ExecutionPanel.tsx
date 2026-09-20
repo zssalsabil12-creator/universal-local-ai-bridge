@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Play, Square, CheckCircle, XCircle, Clock, 
-  AlertTriangle, GitBranch, Terminal, Zap,
+  AlertTriangle, GitBranch, Terminal, ListChecks,
   RefreshCw, Settings, FileCode
 } from 'lucide-react';
 import { CommandExecutor, ExecutionResult, ProjectCommand } from '../utils/commandExecutor';
@@ -211,7 +211,7 @@ export const ExecutionPanel: React.FC<ExecutionPanelProps> = ({
       {/* Available Commands */}
       <div className="mb-6">
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-          <Zap className="h-4 w-4" />
+          <ListChecks className="h-4 w-4" />
           Available Commands
         </h3>
         <div className="space-y-2">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  Globe, ExternalLink, Sparkles, Zap, RefreshCw, Shield, Lock, Copy, CheckCircle2
+  Globe, ExternalLink, Workflow, Link2, RefreshCw, Shield, Lock, Copy, CheckCircle2
 } from 'lucide-react';
 import { ContextResult, generateContextString } from '../utils/contextEngine';
 import { PROVIDERS, getAllProviders, ProviderAdapter } from '../utils/providerAdapters';
@@ -54,7 +54,7 @@ export default function CurrentAIBridgePanel({
     {
       id: 'custom',
       name: 'Custom AI',
-      icon: '🌐',
+      icon: 'CU',
       url: '',
       color: 'from-slate-500 to-cyan-500',
       supportsSystemPrompt: false,
@@ -170,14 +170,14 @@ export default function CurrentAIBridgePanel({
 
   return (
     <div className="h-full overflow-y-auto p-3 space-y-3">
-      <div className="ulab-bridge-card rounded-2xl p-3">
+      <div className="ulab-bridge-card rounded-xl p-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-[9px] uppercase tracking-[0.18em] text-[#6f7fa2]">
-              Universal AI Bridge
+            <div className="text-[9px] uppercase tracking-[0.16em] text-[#7d899d]">
+              Connection
             </div>
             <h3 className="text-base font-black tracking-tight flex items-center gap-2 mt-1">
-              <Zap className="w-4 h-4 text-cyan-300" />
+              <Link2 className="w-4 h-4 text-[#8da2bf]" />
               {providerInfo.name}
             </h3>
           </div>
@@ -194,7 +194,7 @@ export default function CurrentAIBridgePanel({
 
       <section className="p-3 rounded-xl bg-[#0a0a0f] border border-[#20202e]">
         <div className="flex items-center gap-2 mb-2">
-          <Sparkles className="w-4 h-4 text-cyan-300" />
+          <Workflow className="w-4 h-4 text-[#8da2bf]" />
           <div>
             <p className="text-xs font-bold text-white">ما الذي تريد من الـAI أن يفعله؟</p>
             <p className="text-[9px] text-[#71809f]">يُحلل ULAB المهمة محليًا ثم يرسل السياق المناسب تلقائيًا.</p>
@@ -233,7 +233,7 @@ export default function CurrentAIBridgePanel({
                 (selectedProvider === provider.id ? 'is-selected' : '')}
               title={provider.name}
             >
-              <span className="text-lg">{provider.icon}</span>
+              <span className="ulab-provider-mark">{provider.icon}</span>
               <p className="text-[8px] text-[#94a3b8] mt-0.5 truncate">{provider.name}</p>
             </button>
           ))}
@@ -409,7 +409,7 @@ export default function CurrentAIBridgePanel({
       {context ? (
         <section className="p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/20">
           <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-4 h-4 text-cyan-300" />
+            <Workflow className="w-4 h-4 text-[#8da2bf]" />
             <div>
               <p className="text-xs font-bold text-white">Workspace context ready</p>
               <p className="text-[9px] text-[#71809f]">
@@ -423,9 +423,9 @@ export default function CurrentAIBridgePanel({
           </p>
           <button
             onClick={() => void sendContextDirect()}
-            className="w-full mt-2 flex items-center justify-center gap-2 p-2 rounded-lg bg-gradient-to-r from-indigo-500 to-cyan-500 text-white text-xs font-semibold hover:opacity-90"
+            className="ulab-btn ulab-btn-primary w-full mt-2"
           >
-            <Zap className="w-4 h-4" />
+            <Link2 className="w-4 h-4" />
             إرسال سياق المشروع مباشرة
           </button>
         </section>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ExternalLink, Sparkles } from 'lucide-react';
+import { ExternalLink, Megaphone } from 'lucide-react';
 
 interface AdContainerProps {
   slotId?: string;
@@ -47,7 +47,7 @@ export const AdContainer: React.FC<AdContainerProps> = ({
     >
       <div className="flex items-center justify-between text-[10px] text-[#64748b] mb-2 px-1">
         <span className="flex items-center gap-1 font-medium text-left" dir="auto">
-          <Sparkles className="w-3 h-3 text-purple-400" />
+          <Megaphone className="w-3 h-3 text-[#7e8da6]" />
           {label}
         </span>
         <span className="text-[9px] text-[#4a5568]">Google AdSense Ready</span>
@@ -67,7 +67,7 @@ export const AdContainer: React.FC<AdContainerProps> = ({
       ) : (
         <div className="py-4 px-3 rounded-lg border border-dashed border-[#2a2a3a] bg-[#0a0a0f]/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border border-purple-500/30 flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-[#1b2530] border border-[#34404d] flex items-center justify-center flex-shrink-0">
               <span className="text-xs font-bold text-cyan-300">AD</span>
             </div>
             <div>

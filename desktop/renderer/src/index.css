@@ -487,3 +487,116 @@ body::before {
 @keyframes ulab-boot-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
 @keyframes ulab-pulse { 0%,100%{opacity:.45} 50%{opacity:1} }
 @keyframes ulab-boot-orbit { from{transform:rotate(0deg) translateX(5px) rotate(0deg)} to{transform:rotate(360deg) translateX(5px) rotate(-360deg)} }
+/* ULAB Professional UI v4 */
+:root{--ulab-bg:#0d1117;--ulab-bg-elevated:#11161d;--ulab-surface:#151b23;--ulab-surface-2:#1a212b;--ulab-surface-3:#202834;--ulab-border:#2a3441;--ulab-border-strong:#364252;--ulab-text:#eef2f6;--ulab-text-muted:#9aa7b6;--ulab-text-subtle:#6f7d8d;--ulab-accent:#4f7fd6;--ulab-accent-strong:#5e8ee6;--ulab-accent-soft:rgba(79,127,214,.13);--ulab-shadow:0 12px 32px rgba(0,0,0,.22)}
+html,body{background:var(--ulab-bg)!important;color:var(--ulab-text);font-family:"IBM Plex Sans Arabic","Segoe UI",system-ui,sans-serif}
+body{overflow:hidden;background:var(--ulab-bg)!important}
+body::before,body::after{display:none!important}
+*{scrollbar-color:#394454 transparent}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:#394454;border-radius:4px}
+*:focus-visible{outline:2px solid rgba(79,127,214,.72)!important;outline-offset:2px}
+::selection{background:rgba(79,127,214,.24)!important;color:#fff}
+.gradient-text{background:none!important;-webkit-text-fill-color:currentColor!important;color:var(--ulab-text)!important;animation:none!important}
+.btn-primary,.ulab-btn-primary{background:var(--ulab-accent)!important;border:1px solid #6794e5!important;box-shadow:none!important;color:#fff!important;transition:background-color .18s ease,border-color .18s ease,transform .18s ease!important}
+.btn-primary:hover,.ulab-btn-primary:hover{background:var(--ulab-accent-strong)!important;border-color:#78a0eb!important;transform:translateY(-1px)}
+.btn-primary::before,.btn-primary::after{display:none!important}
+.ulab-btn{min-height:36px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 13px;border-radius:8px;font-size:12px;font-weight:700}
+.ulab-icon-button{width:32px;height:32px;display:inline-grid;place-items:center;border:1px solid var(--ulab-border);border-radius:8px;background:var(--ulab-surface);color:var(--ulab-text-muted)}
+.ulab-icon-button:hover{background:var(--ulab-surface-2);border-color:var(--ulab-border-strong);color:var(--ulab-text)}
+.ulab-workspace{background:var(--ulab-bg)!important}
+.ulab-topbar{background:rgba(13,17,23,.96)!important;border-bottom:1px solid var(--ulab-border)!important;box-shadow:0 6px 18px rgba(0,0,0,.12)!important;backdrop-filter:blur(12px)}
+.ulab-topbar::after{display:none!important}
+.ulab-topbar-actions button{background:var(--ulab-surface)!important;border:1px solid var(--ulab-border)!important;box-shadow:none!important}
+.ulab-topbar-actions button:hover{background:var(--ulab-surface-2)!important;border-color:var(--ulab-border-strong)!important;box-shadow:none!important;transform:none!important}
+.ai-bridge-primary{background:var(--ulab-accent)!important;border:1px solid #6794e5!important;box-shadow:none!important}
+.ai-bridge-primary:hover{background:var(--ulab-accent-strong)!important}
+.ulab-sidebar,.ulab-inspector{background:#10151c!important;border-color:var(--ulab-border)!important;box-shadow:none!important}
+.ulab-sidebar{border-right:1px solid var(--ulab-border)!important}.ulab-inspector{border-left:1px solid var(--ulab-border)!important}
+.ulab-sidebar-tabs,.ulab-inspector-tabs{background:#11161d!important;border-color:var(--ulab-border)!important}
+.ulab-sidebar-tabs button,.ulab-inspector-tabs button{min-width:0;color:var(--ulab-text-subtle)!important;border:0!important;background:transparent!important}
+.ulab-sidebar-tabs button:hover,.ulab-inspector-tabs button:hover{color:var(--ulab-text)!important;background:rgba(255,255,255,.025)!important}
+.ulab-sidebar-tabs button.border-indigo-400,.ulab-inspector-tabs button.border-indigo-400{color:#cbd9f1!important;border-bottom-color:var(--ulab-accent)!important}
+.ulab-project-chip{background:var(--ulab-surface)!important;border:1px solid var(--ulab-border)!important;box-shadow:none!important}
+.ulab-project-chip-name{color:var(--ulab-text)!important}
+.ulab-editor{background:#0f141a!important}.ulab-editor::before{display:none!important}
+.code-block{background:#10151b!important;border:0!important;border-radius:0!important}
+.code-block>div:first-child{background:#121821!important;border-bottom-color:var(--ulab-border)!important}
+.code-block .group:hover{background:rgba(255,255,255,.025)!important}
+.ulab-bridge-card{background:#161c24!important;border:1px solid var(--ulab-border)!important;box-shadow:var(--ulab-shadow)!important}
+.ulab-bridge-card::before{display:none!important}
+.ulab-status-pill{background:#11171e!important;border-color:var(--ulab-border)!important;color:var(--ulab-text-muted)!important}
+.ulab-status-dot{box-shadow:none!important}
+.ulab-provider-grid button{min-height:54px!important;background:#131921!important;border:1px solid var(--ulab-border)!important;border-radius:8px!important;box-shadow:none!important}
+.ulab-provider-grid button:hover{background:#1a212b!important;border-color:var(--ulab-border-strong)!important;box-shadow:none!important;transform:none!important}
+.ulab-provider-grid button.is-selected{background:var(--ulab-accent-soft)!important;border-color:var(--ulab-accent)!important;box-shadow:inset 0 0 0 1px rgba(94,142,230,.16)!important}
+.ulab-provider-grid button.is-selected::after{display:none!important}
+.ulab-provider-mark{width:30px;height:30px;margin:0 auto;display:grid;place-items:center;border:1px solid #344050;border-radius:7px;background:#1a212a;color:#c6d0dc;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:10px;font-weight:800;letter-spacing:-.02em}
+.ulab-provider-grid button.is-selected .ulab-provider-mark{background:rgba(79,127,214,.18);border-color:rgba(94,142,230,.55);color:#dbe8ff}
+.ulab-empty-brand{width:84px;height:84px;display:grid;place-items:center;border:1px solid var(--ulab-border);border-radius:16px;background:#151b22;box-shadow:var(--ulab-shadow)}
+.ulab-eyebrow{color:var(--ulab-text-subtle)!important;font-size:10px;font-weight:800;letter-spacing:.18em}
+.ulab-empty-state h2{color:#f2f5f8;letter-spacing:-.025em}
+.glass-panel,.glass-panel-strong{background:var(--ulab-surface)!important;border:1px solid var(--ulab-border)!important;backdrop-filter:none!important;box-shadow:var(--ulab-shadow)!important}
+.hover-lift:hover,.card-hover:hover{transform:none!important;box-shadow:var(--ulab-shadow)!important;border-color:var(--ulab-border-strong)!important}
+.shimmer::after{display:none!important}
+.ulab-workspace-grid{background:var(--ulab-bg)}
+@media (max-width:1180px){.ulab-provider-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important}}
+
+/* Professional surface normalization */
+.ulab-workspace [class*="bg-gradient-to"]{
+  background-image:none!important;
+  background-color:var(--ulab-surface)!important;
+}
+.ulab-workspace [class*="shadow-[0_0"]{
+  box-shadow:none!important;
+}
+.ulab-workspace input,
+.ulab-workspace textarea,
+.ulab-workspace select{
+  background:#10151b!important;
+  border-color:var(--ulab-border)!important;
+  color:var(--ulab-text)!important;
+}
+.ulab-workspace input:focus,
+.ulab-workspace textarea:focus,
+.ulab-workspace select:focus{
+  border-color:#506a8f!important;
+  box-shadow:0 0 0 2px rgba(79,127,214,.12)!important;
+}
+.ulab-workspace section{
+  border-color:var(--ulab-border)!important;
+}
+.ulab-workspace .text-indigo-400,
+.ulab-workspace .text-cyan-400,
+.ulab-workspace .text-cyan-300{
+  color:#8ea7cc!important;
+}
+.ulab-workspace .text-purple-400,
+.ulab-workspace .text-purple-300{
+  color:#9b91b5!important;
+}
+.ulab-workspace .text-yellow-400,
+.ulab-workspace .text-yellow-300{
+  color:#b7a574!important;
+}
+.ulab-workspace .bg-indigo-500\/10,
+.ulab-workspace .bg-cyan-500\/10,
+.ulab-workspace .bg-purple-500\/10{
+  background:rgba(79,127,214,.10)!important;
+}
+.ulab-workspace .border-indigo-500\/20,
+.ulab-workspace .border-cyan-500\/20,
+.ulab-workspace .border-purple-500\/20{
+  border-color:rgba(79,127,214,.28)!important;
+}
+.ulab-workspace .bg-green-500\/5,
+.ulab-workspace .bg-cyan-500\/5,
+.ulab-workspace .bg-indigo-500\/5{
+  background:#141b23!important;
+}
+.ulab-workspace .border-green-500\/20,
+.ulab-workspace .border-cyan-500\/20,
+.ulab-workspace .border-indigo-500\/20{
+  border-color:var(--ulab-border)!important;
+}

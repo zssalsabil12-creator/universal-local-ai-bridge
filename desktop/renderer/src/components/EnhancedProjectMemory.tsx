@@ -62,16 +62,11 @@ export const EnhancedProjectMemory: React.FC<EnhancedProjectMemoryProps> = ({
 
   const getTypeIcon = (type: MemoryEntry['type']) => {
     switch (type) {
-      case 'rule':
-        return '📏';
-      case 'convention':
-        return '📝';
-      case 'architecture':
-        return '🏗️';
-      case 'decision':
-        return '✅';
-      case 'preference':
-        return '⭐';
+      case 'rule': return 'RULE';
+      case 'convention': return 'CONV';
+      case 'architecture': return 'ARCH';
+      case 'decision': return 'DEC';
+      case 'preference': return 'PREF';
     }
   };
 
@@ -183,11 +178,11 @@ export const EnhancedProjectMemory: React.FC<EnhancedProjectMemoryProps> = ({
               onChange={(e) => setNewType(e.target.value as MemoryEntry['type'])}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
             >
-              <option value="rule">📏 قاعدة</option>
-              <option value="convention">📝 اصطلاح</option>
-              <option value="architecture">🏗️ بنية</option>
-              <option value="decision">✅ قرار</option>
-              <option value="preference">⭐ تفضيل</option>
+              <option value="rule">قاعدة</option>
+              <option value="convention">اصطلاح</option>
+              <option value="architecture">بنية</option>
+              <option value="decision">قرار</option>
+              <option value="preference">تفضيل</option>
             </select>
           </div>
 

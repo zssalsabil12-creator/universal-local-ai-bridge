@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Folder, FileCode, Network } from 'lucide-react';
 import { ProjectIndex } from '../utils/fileSystem';
 
 interface ProjectMapProps {
@@ -46,7 +47,7 @@ export default function ProjectMap({ index, onFileClick }: ProjectMapProps) {
   return (
     <div className="p-4 h-full overflow-y-auto">
       <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
-        <span className="text-indigo-400">🗺️</span>
+        <Network className="w-4 h-4 text-[#7e8da6]" />
         خريطة المشروع
       </h3>
 
@@ -119,7 +120,7 @@ function TreeNode({ nodes, depth, onFileClick }: { nodes: any[]; depth: number; 
             style={{ paddingRight: `${depth * 10}px` }}
             onClick={() => node.type === 'file' && onFileClick?.(node.path)}
           >
-            <span>{node.type === 'directory' ? '📁' : '📄'}</span>
+            {node.type === 'directory' ? <Folder className="w-3 h-3 text-[#7d8b9e]" /> : <FileCode className="w-3 h-3 text-[#687689]" />}
             <span className="truncate">{node.name}</span>
             {node.type === 'directory' && node.childCount > 0 && (
               <span className="text-[#64748b] text-[8px]">({node.childCount})</span>

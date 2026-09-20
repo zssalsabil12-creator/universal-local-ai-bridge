@@ -309,7 +309,7 @@ export default function PermissionCenter({ config, onUpdate }: PermissionCenterP
                     <div className="flex items-center gap-1">
                       <span className={`px-1.5 py-0.5 rounded border text-[9px] ${levelColors[rule.level]}`}>
                         <LevelIcon className="w-2.5 h-2.5 inline mr-0.5" />
-                        {rule.level === 'allow' ? '✓' : rule.level === 'ask' ? '?' : '✕'}
+                        {rule.level === 'allow' ? 'سماح' : rule.level === 'ask' ? 'سؤال' : 'رفض'}
                       </span>
                       <button
                         onClick={() => handleDeleteRule(rule.id)}

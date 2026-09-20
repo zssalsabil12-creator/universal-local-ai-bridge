@@ -50,7 +50,7 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-[#2a2a3a]">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-white">
+                <div className="w-10 h-10 rounded-lg bg-[#223047] border border-[#3a485a] flex items-center justify-center text-white">
                   <Keyboard className="w-5 h-5" />
                 </div>
                 <div>
@@ -97,7 +97,7 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShor
             {/* Footer */}
             <div className="p-4 border-t border-[#2a2a3a] text-center">
               <p className="text-[10px] text-[#64748b]">
-                💡 اضغط <kbd className="px-1.5 py-0.5 rounded bg-[#252530] border border-[#2a2a3a] text-[9px] font-mono">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 rounded bg-[#252530] border border-[#2a2a3a] text-[9px] font-mono">?</kbd> لعرض هذه النافذة
+                اضغط <kbd className="px-1.5 py-0.5 rounded bg-[#252530] border border-[#2a2a3a] text-[9px] font-mono">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 rounded bg-[#252530] border border-[#2a2a3a] text-[9px] font-mono">?</kbd> لعرض هذه النافذة
               </p>
             </div>
           </motion.div>

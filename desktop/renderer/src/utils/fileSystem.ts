@@ -53,22 +53,22 @@ export function getExtension(filename: string): string {
 }
 
 export function getFileIcon(name: string, type: 'file' | 'directory'): string {
-  if (type === 'directory') return '📁';
+  if (type === 'directory') return 'DIR';
   const ext = getExtension(name);
   const iconMap: Record<string, string> = {
-    'ts': '🔷', 'tsx': '🔷', 'js': '🟨', 'jsx': '🟨',
-    'py': '🐍', 'rb': '💎', 'go': '🔵', 'rs': '🦀',
-    'java': '☕', 'kt': '🟣', 'swift': '🍎',
-    'html': '🌐', 'css': '🎨', 'scss': '🎨', 'less': '🎨',
-    'json': '📋', 'yaml': '📋', 'yml': '📋', 'toml': '📋',
-    'md': '📝', 'txt': '📄', 'csv': '📊',
-    'png': '🖼️', 'jpg': '🖼️', 'jpeg': '🖼️', 'gif': '🖼️', 'svg': '🖼️',
-    'sql': '🗃️', 'db': '🗃️',
-    'sh': '⚙️', 'bash': '⚙️', 'zsh': '⚙️',
-    'dockerfile': '🐳', 'docker': '🐳',
-    'gitignore': '🚫', 'env': '🔒',
+    ts: 'TS', tsx: 'TS', js: 'JS', jsx: 'JS',
+    py: 'PY', rb: 'RB', go: 'GO', rs: 'RS',
+    java: 'JV', kt: 'KT', swift: 'SW',
+    html: 'HT', css: 'CSS', scss: 'CSS', less: 'CSS',
+    json: 'JSN', yaml: 'YML', yml: 'YML', toml: 'TOM',
+    md: 'MD', txt: 'TXT', csv: 'CSV',
+    png: 'IMG', jpg: 'IMG', jpeg: 'IMG', gif: 'IMG', svg: 'SVG',
+    sql: 'SQL', db: 'DB',
+    sh: 'SH', bash: 'SH', zsh: 'SH',
+    dockerfile: 'DKR', docker: 'DKR',
+    gitignore: 'GIT', env: 'ENV',
   };
-  return iconMap[ext] || '📄';
+  return iconMap[ext] || 'FILE';
 }
 
 export function formatFileSize(bytes: number): string {

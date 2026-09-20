@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Pin, FileCode, Folder, Search, Filter, Circle } from 'lucide-react';
+import { Plus, X, Pin, FileCode, Folder, Search, Filter, Circle, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { ProjectIndex, FileNode } from '../utils/fileSystem';
 
 interface ContextBuilderProps {
@@ -64,8 +64,8 @@ export default function ContextBuilder({
       <div key={node.path}>
         <div
           className={`flex items-center gap-1.5 py-1 px-2 text-xs rounded transition-colors ${
-            status === 'pinned' ? 'bg-yellow-500/10 text-yellow-300' :
-            status === 'selected' ? 'bg-indigo-500/10 text-indigo-300' :
+            status === 'pinned' ? 'bg-[#27301f] text-[#b6c18e]' :
+            status === 'selected' ? 'bg-[#1c2a40] text-[#b9caea]' :
             status === 'excluded' ? 'bg-red-500/10 text-red-300 line-through' :
             'text-[#94a3b8] hover:bg-[#252530]'
           }`}
@@ -77,7 +77,7 @@ export default function ContextBuilder({
                 onClick={() => toggleDir(node.path)}
                 className="w-3 h-3 flex items-center justify-center"
               >
-                {isExpanded ? '▼' : '▶'}
+                {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
               </button>
               <Folder className="w-3 h-3 text-yellow-400" />
               <span className="flex-1 truncate">{node.name}</span>
@@ -112,7 +112,7 @@ export default function ContextBuilder({
                   title={selectedFiles.includes(node.path) ? 'إلغاء التحديد' : 'تحديد'}
                 >
                   {selectedFiles.includes(node.path) ? (
-                    <span className="text-[10px] text-indigo-400">✓</span>
+                    <Check className="w-3 h-3 text-indigo-400" />
                   ) : (
                     <span className="text-[10px] text-[#64748b]">○</span>
                   )}
@@ -242,7 +242,7 @@ export default function ContextBuilder({
                         className="p-0.5 rounded hover:bg-[#2a2a3a]"
                       >
                         {selectedFiles.includes(file.path) ? (
-                          <span className="text-indigo-400">✓</span>
+                          <Check className="w-3 h-3 text-indigo-400" />
                         ) : (
                           <span className="text-[#64748b]">○</span>
                         )}
@@ -264,9 +264,9 @@ export default function ContextBuilder({
 
       {/* Help */}
       <div className="p-2 border-t border-[#2a2a3a] text-[9px] text-[#64748b] space-y-0.5">
-        <p>✓ تحديد: يُرسل عند الطلب</p>
-        <p>📌 تثبيت: يُرسل دائماً</p>
-        <p>✕ استبعاد: يُتجاهل دائماً</p>
+        <p>تحديد: يُرسل عند الطلب</p>
+        <p>تثبيت: يُرسل دائماً</p>
+        <p>استبعاد: يُتجاهل دائماً</p>
       </div>
     </div>
   );
