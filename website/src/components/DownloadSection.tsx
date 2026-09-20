@@ -42,13 +42,13 @@ export default function DownloadSection() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-cyan-400/20 bg-cyan-400/5 text-cyan-200 text-xs font-bold tracking-[0.18em] uppercase mb-6">
             <Sparkles className="w-4 h-4" />
-            Get started
+            {t('nav.download')}
           </div>
           <h2 className="text-4xl sm:text-5xl md:text-6xl font-black mb-5">
             <span className="gradient-text">{t('nav.download')}</span>
           </h2>
           <p className="text-lg sm:text-xl text-[#94a3b8] max-w-3xl mx-auto leading-relaxed">
-            Download the ULAB desktop application, install it once, and connect your selected local workspace to supported web-based AI sessions.
+            {t('cta.subtitle')}
           </p>
         </motion.div>
 
@@ -67,8 +67,8 @@ export default function DownloadSection() {
                     <HardDriveDownload className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <p className="text-white font-black text-xl">ULAB Desktop for Windows</p>
-                    <p className="text-sm text-[#64748b]">Installer | v{VERSION} | {INSTALLER_SIZE}</p>
+                    <p className="text-white font-black text-xl">{t('hero.download')}</p>
+                    <p className="text-sm text-[#64748b]">v{VERSION} • {INSTALLER_SIZE}</p>
                   </div>
                 </div>
                 <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-400/20 text-green-300 text-xs font-bold">
@@ -79,9 +79,9 @@ export default function DownloadSection() {
 
               <div className="grid sm:grid-cols-3 gap-3 mb-8">
                 {[
-                  { icon: <PackageCheck className="w-4 h-4" />, text: 'Ready-to-run installer' },
-                  { icon: <Lock className="w-4 h-4" />, text: 'Local-first design' },
-                  { icon: <Shield className="w-4 h-4" />, text: 'Approval-based writes' },
+                  { icon: <PackageCheck className="w-4 h-4" />, text: t('hero.download') },
+                  { icon: <Lock className="w-4 h-4" />, text: t('footer.local') },
+                  { icon: <Shield className="w-4 h-4" />, text: t('workspace.permissions') },
                 ].map((item) => (
                   <div key={item.text} className="rounded-xl border border-white/5 bg-white/[0.025] p-3 text-xs text-[#cbd5e1] flex items-center gap-2">
                     <span className="text-cyan-300">{item.icon}</span>
@@ -110,13 +110,13 @@ export default function DownloadSection() {
             viewport={{ once: true }}
             className="rounded-[2rem] border border-purple-400/15 bg-[#111118]/90 backdrop-blur-xl p-7 sm:p-8"
           >
-            <p className="text-xs uppercase tracking-[0.18em] font-bold text-purple-300 mb-5">Installation flow</p>
+            <p className="text-xs uppercase tracking-[0.18em] font-bold text-purple-300 mb-5">{t('howItWorks.title')}</p>
             <div className="space-y-5">
               {[
-                { icon: <Download className="w-4 h-4" />, title: '1. Download', desc: 'Run the Windows installer from the official ULAB website.' },
-                { icon: <Monitor className="w-4 h-4" />, title: '2. Install', desc: 'ULAB installs the local Agent and creates your launch shortcut.' },
-                { icon: <Monitor className="w-4 h-4" />, title: '3. Connect', desc: 'Launch ULAB Desktop; the bundled Local Agent starts automatically, then select a workspace.' },
-                { icon: <Zap className="w-4 h-4" />, title: '4. Build locally', desc: 'Use AI with local project context, approvals, terminal and Git controls.' },
+                { icon: <Download className="w-4 h-4" />, title: t('howItWorks.step1.title'), desc: t('howItWorks.step1.desc') },
+                { icon: <Monitor className="w-4 h-4" />, title: t('howItWorks.step2.title'), desc: t('howItWorks.step2.desc') },
+                { icon: <Monitor className="w-4 h-4" />, title: t('howItWorks.step3.title'), desc: t('howItWorks.step3.desc') },
+                { icon: <Zap className="w-4 h-4" />, title: t('howItWorks.step5.title'), desc: t('howItWorks.step5.desc') },
               ].map((step, index) => (
                 <div key={step.title} className="flex gap-4">
                   <div className="relative flex flex-col items-center">
@@ -137,9 +137,9 @@ export default function DownloadSection() {
 
         <div className="mt-6 grid sm:grid-cols-3 gap-4">
           {[
-            { title: 'Windows 10 / 11', desc: 'Desktop Agent installer', icon: <Monitor className="w-5 h-5" /> },
-            { title: 'Web AI sessions', desc: 'ChatGPT, Claude, Gemini and more', icon: <Globe className="w-5 h-5" /> },
-            { title: 'Privacy first', desc: 'Local workspace boundary', icon: <Shield className="w-5 h-5" /> },
+            { title: 'Windows 10 / 11', desc: t('hero.download'), icon: <Monitor className="w-5 h-5" /> },
+            { title: t('hero.compatible'), desc: t('faq.a3'), icon: <Globe className="w-5 h-5" /> },
+            { title: t('footer.privacy'), desc: t('architecture.localNote'), icon: <Shield className="w-5 h-5" /> },
           ].map((item) => (
             <div key={item.title} className="rounded-2xl border border-white/5 bg-[#0d0f17]/80 p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-center text-cyan-300">{item.icon}</div>
