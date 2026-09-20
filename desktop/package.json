@@ -13,7 +13,7 @@
     "renderer:build": "npm --prefix renderer run build",
     "renderer:typecheck": "npm --prefix renderer run typecheck",
     "bridge:check": "node electron/aiBridgeSecurity.test.cjs",
-    "bridge:dom-check": "electron --no-sandbox electron/aiBridgeDom.test.cjs",
+    "bridge:dom-check": "node electron/runAiBridgeDomTest.cjs",
     "check": "node electron/aiBridgeSecurity.test.cjs && npm run bridge:dom-check && node --check electron/main.cjs && node --check electron/preload.cjs"
   }
 }
