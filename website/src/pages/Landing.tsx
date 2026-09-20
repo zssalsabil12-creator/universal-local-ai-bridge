@@ -130,7 +130,7 @@ function Hero({ onLaunch }: { onLaunch: () => void }) {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20">
-            <a href="/downloads/ULAB.exe" download="ULAB.exe" className="px-10 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 text-white font-bold text-lg hover:shadow-2xl hover:shadow-cyan-500/30 transition-all animate-pulse-glow">
+            <a href="https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.4/ULAB-Setup-3.10.4-Windows-x64.exe" download="ULAB-Setup-3.10.4-Windows-x64.exe" className="px-10 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 text-white font-bold text-lg hover:shadow-2xl hover:shadow-cyan-500/30 transition-all animate-pulse-glow">
               <span className="flex items-center gap-3">
                 <Download className="w-6 h-6" />
                 {t('hero.download')}
