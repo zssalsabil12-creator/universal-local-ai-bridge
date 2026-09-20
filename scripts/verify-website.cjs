@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..');
 const website = path.join(root, 'website');
-const releaseUrl = 'https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.1/ULAB-Setup-3.10.1-Windows-x64.exe';
+const releaseUrl = 'https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.2/ULAB-Setup-3.10.2-Windows-x64.exe';
 const checksumUrl = releaseUrl + '.sha256';
 
 for (const name of ['index.html', 'download.html']) {

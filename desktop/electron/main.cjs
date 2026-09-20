@@ -11,6 +11,7 @@ const http = require('http');
 const WebSocket = require('ws');
 const { getAIToolDisposition, extractAIToolRequest, isTrustedAIUrl, createAIToolApprovalContext, validateAIToolApprovalContext, AI_APPROVAL_TTL_MS } = require('./aiBridgeSecurity.cjs');
 const { isUsableAIWebContents } = require('./aiBridgeRuntime.cjs');
+const { buildAIInteractionScript, buildAIProbeScript, buildAssistantTextScript } = require('./aiBridgeDom.cjs');
 let agentProcess = null;
 let bridgeAgentSocket = null;
 let bridgeAgentConnecting = null;
@@ -153,100 +154,7 @@ function resizeAIView() {
 }
 
 function aiInjectionScript(payload) {
-  return `(async () => {
-    const text = ${JSON.stringify(payload)};
-    const candidates = [
-      'textarea[data-testid*="message"]',
-      'textarea[placeholder*="Message"]',
-      'textarea[placeholder*="message"]',
-      'textarea[placeholder*="Ask"]',
-      'textarea[placeholder*="ask"]',
-      'textarea[placeholder*="Prompt"]',
-      'textarea[placeholder*="prompt"]',
-      'textarea[aria-label*="Message"]',
-      'textarea[aria-label*="message"]',
-      'textarea[name*="message"]',
-      'textarea[name*="prompt"]',
-      'textarea',
-      '[contenteditable="true"][role="textbox"]',
-      '[contenteditable="true"][aria-label*="Message"]',
-      '[contenteditable="true"][aria-label*="message"]',
-      '[contenteditable="true"][data-placeholder*="message"]',
-      '[contenteditable="true"]',
-      'input[type="text"][placeholder*="Message"]',
-      'input[type="text"][placeholder*="message"]',
-      'input[type="text"][aria-label*="Message"]',
-      'input[placeholder*="Ask anything"]',
-      '[data-testid*="textbox"]',
-      '[data-testid*="composer"] [contenteditable="true"]'
-    ];
-    const usable = node => {
-      if (!node || !node.isConnected) return false;
-      const style = getComputedStyle(node);
-      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-      return node.getClientRects().length > 0 && !node.disabled;
-    };
-    let el = null;
-    for (const selector of candidates) {
-      const node = document.querySelector(selector);
-      if (usable(node)) { el = node; break; }
-    }
-    if (!el) return { ok:false, reason:'AI_INPUT_NOT_FOUND' };
-    el.focus();
-    if (el.matches('textarea,input')) {
-      const ctor = el.tagName === 'INPUT' ? HTMLInputElement : HTMLTextAreaElement;
-      const setter = Object.getOwnPropertyDescriptor(ctor.prototype, 'value')?.set;
-      if (setter) setter.call(el, text); else el.value = text;
-    } else {
-      let inserted = false;
-      try { document.execCommand('selectAll', false); inserted = document.execCommand('insertText', false, text); } catch {}
-      if (!inserted) { el.textContent = text; el.innerText = text; }
-    }
-    el.dispatchEvent(new InputEvent('beforeinput', { bubbles:true, inputType:'insertText', data:text }));
-    el.dispatchEvent(new InputEvent('input', { bubbles:true, inputType:'insertText', data:text }));
-    el.dispatchEvent(new Event('change', { bubbles:true }));
-    await new Promise(resolve => setTimeout(resolve, 250));
-
-    const buttons = [
-      'button[data-testid*="send"]',
-      'button[data-testid*="submit"]',
-      'button[data-testid*="ask"]',
-      'button[aria-label*="Send"]',
-      'button[aria-label*="send"]',
-      'button[aria-label*="Submit"]',
-      'button[aria-label*="Ask"]',
-      'button[aria-label*="Send message"]',
-      'button[aria-label*="Envoyer"]',
-      'button[aria-label*="Enviar"]',
-      'button[aria-label*="Envia"]',
-      'button[aria-label*="送信"]',
-      'button[aria-label*="发送"]',
-      'button[aria-label*="Enviar mensagem"]',
-      'button[title*="Send"]',
-      'button[title*="send"]',
-      'button[title*="Send message"]',
-      'button[type="submit"]'
-    ];
-    let button = null;
-    for (const selector of buttons) {
-      const node = document.querySelector(selector);
-      if (usable(node)) { button = node; break; }
-    }
-    const form = el.closest('form');
-    if (!button && form) {
-      button = Array.from(form.querySelectorAll('button')).find(node => usable(node)) || null;
-      if (!button && typeof form.requestSubmit === 'function') { form.requestSubmit(); return { ok:true, mode:'form-submit' }; }
-    }
-    if (!button) {
-      const nearby = el.closest('form, [role="form"], div') || document.body;
-      const candidates = Array.from(nearby.querySelectorAll('button')).filter(node => usable(node));
-      button = candidates.find(node => /^(send|submit|ask|generate|go)$/i.test((node.innerText || node.getAttribute('aria-label') || '').trim())) || null;
-    }
-    if (button) { button.click(); return { ok:true, mode:'button', selector: button.getAttribute('aria-label') || button.getAttribute('data-testid') || button.tagName }; }
-    el.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',bubbles:true,cancelable:true}));
-    el.dispatchEvent(new KeyboardEvent('keyup',{key:'Enter',code:'Enter',bubbles:true}));
-    return { ok:true, mode:'enter' };
-  })()`;
+  return buildAIInteractionScript(payload);
 }
 
 async function sendTextToAI(text) {
@@ -264,68 +172,13 @@ async function sendTextToAI(text) {
 
 async function diagnoseAIPage() {
   if (!aiView) return { ok:false, error:'AI_SESSION_NOT_OPEN' };
-  const script = `(() => {
-    const visible = n => {
-      if (!n || !n.isConnected) return false;
-      const style = getComputedStyle(n);
-      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-      return n.getClientRects().length > 0;
-    };
-    const selectors = {
-      input: [
-        'textarea[placeholder*="Message"]','textarea[placeholder*="message"]','textarea[placeholder*="Ask"]','textarea[placeholder*="ask"]',
-        'textarea[placeholder*="Prompt"]','textarea[placeholder*="prompt"]','textarea[aria-label*="Message"]','textarea[name*="message"]',
-        'textarea[name*="prompt"]','textarea','[contenteditable="true"][role="textbox"]','[contenteditable="true"][aria-label*="Message"]','[contenteditable="true"]',
-        'input[type="text"][placeholder*="Message"]','input[type="text"][placeholder*="message"]'
-      ],
-      send: [
-        'button[data-testid*="send"]','button[data-testid*="submit"]','button[data-testid*="ask"]','button[aria-label*="Send"]',
-        'button[aria-label*="send"]','button[aria-label*="Submit"]','button[aria-label*="Ask"]','button[aria-label*="Envoyer"]',
-        'button[aria-label*="Enviar"]','button[aria-label*="Envia"]','button[aria-label*="送信"]','button[aria-label*="发送"]',
-        'button[aria-label*="Enviar mensagem"]','button[title*="Send"]',
-        'button[title*="send"]','button[type="submit"]'
-      ],
-      assistant: [
-        '[data-message-author-role="assistant"]','[data-testid*="assistant"]','[data-role="assistant"]','[role="assistant"]',
-        '[aria-label*="assistant"]','[aria-label*="Assistant"]','main [class*="assistant"]','main [class*="response"]',
-        'main [class*="message"] [data-author="assistant"]','main article','[role="article"]'
-      ]
-    };
-    const sample = key => selectors[key].flatMap(selector => Array.from(document.querySelectorAll(selector)).filter(visible).slice(0,3).map(n => ({selector,tag:n.tagName,text:(n.innerText||n.getAttribute('aria-label')||n.getAttribute('placeholder')||'').slice(0,120)}))).slice(0,8);
-    return { ok:true, url:location.href, title:document.title, inputs:sample('input'), sendButtons:sample('send'), assistantNodes:sample('assistant') };
-  })()`;
-  try { return await aiView.webContents.executeJavaScript(script, true); }
+  try { return await aiView.webContents.executeJavaScript(buildAIProbeScript(), true); }
   catch (error) { return { ok:false, error:error.message }; }
 }
 
 async function readLatestAssistantText() {
   if (!aiView) return '';
-  const script = `(() => {
-    const selectors = [
-      '[data-message-author-role="assistant"]',
-      '[data-testid*="assistant"]',
-      '[data-role="assistant"]',
-      '[role="assistant"]',
-      '[aria-label*="assistant"]',
-      '[aria-label*="Assistant"]',
-      '[data-testid^="conversation-turn-"] [data-message-author-role="assistant"]',
-      'main [class*="assistant"]',
-      'main [class*="response"]',
-      'main [class*="message"] [data-author="assistant"]',
-      'main article',
-      '[role="article"]'
-    ];
-    const nodes = [];
-    for (const selector of selectors) document.querySelectorAll(selector).forEach(n => nodes.push(n));
-    const unique = Array.from(new Set(nodes));
-    const visible = unique.filter(n => {
-      if (!n || !n.innerText || !n.isConnected) return false;
-      const style = getComputedStyle(n);
-      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0' && n.getClientRects().length > 0;
-    });
-    return visible.length ? visible[visible.length - 1].innerText.trim() : '';
-  })()`;
-  try { return await aiView.webContents.executeJavaScript(script, false); } catch { return ''; }
+  try { return await aiView.webContents.executeJavaScript(buildAssistantTextScript(), false); } catch { return ''; }
 }
 
 function extractToolBlock(text) {
@@ -716,7 +569,7 @@ ipcMain.handle('mcp-config', async () => ({
 ipcMain.handle('mcp-diagnostics', async () => {
   const discover = await callMCP('server/discover', 'server/discover', {
     _meta:{
-      'io.modelcontextprotocol/clientInfo':{name:'ULAB Desktop',version:'3.10.1'},
+      'io.modelcontextprotocol/clientInfo':{name:'ULAB Desktop',version:'3.10.2'},
       'io.modelcontextprotocol/clientCapabilities':{},
     },
   });
