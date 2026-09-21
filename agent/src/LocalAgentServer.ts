@@ -239,7 +239,7 @@ export class LocalAgentServer {
           res.end(
             JSON.stringify({
               status: 'ok',
-              version: '3.10.7',
+              version: '3.10.8',
               hasActiveWorkspace: !!this.currentSession,
               workspace: this.currentSession?.workspaceName || null,
             })

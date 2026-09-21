@@ -3,7 +3,7 @@ import type { LocalAgentServer } from './LocalAgentServer';
 
 const PROTOCOL_MODERN = '2026-07-28';
 const PROTOCOL_LEGACY = '2025-11-25';
-const ULAB_VERSION = '3.10.7';
+const ULAB_VERSION = '3.10.8';
 const MAX_BODY_BYTES = 1024 * 1024;
 
 export interface MCPToolDefinition {

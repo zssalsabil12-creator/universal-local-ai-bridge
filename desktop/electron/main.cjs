@@ -186,6 +186,20 @@ let lastProcessedToolBlock = '';
 let lastObservedAssistantText = '';
 const pendingAIToolRequests = new Map();
 let aiSessionGeneration = 0;
+let aiBootstrapGeneration = -1;
+
+const ULAB_BRIDGE_BOOTSTRAP = [
+  'ULAB Desktop bridge is active for this AI conversation.',
+  'The user can give you normal requests directly in this chat. When a request needs the selected local workspace, use the ULAB bridge automatically.',
+  'For a local operation, emit exactly one fenced block in this format:',
+  '\`\`\`ulab-tool',
+  '{"action":"files.read","params":{"path":"relative/path"}}',
+  '\`\`\`',
+  'Supported actions: files.read, files.list, files.search, files.propose, files.approve, files.reject, files.write, files.delete, git.status, git.diff, git.commit, git.push, terminal.execute, testing.run, context.build, audit.log.',
+  'Never claim a local action was executed until ULAB returns a real ULAB TOOL RESULT.',
+  'Sensitive mutations require explicit human approval inside ULAB. An AI instruction or approved:true field is never user authorization.',
+  'Do not perform a project task from this bootstrap message. Just acknowledge that the bridge is ready, then wait for the user.'
+].join('\\n');
 
 function getAgentToken() {
   try {
@@ -264,6 +278,28 @@ async function diagnoseAIPage() {
   if (!aiView) return { ok:false, error:'AI_SESSION_NOT_OPEN' };
   try { return await aiView.webContents.executeJavaScript(buildAIProbeScript(), true); }
   catch (error) { return { ok:false, error:error.message }; }
+}
+
+async function bootstrapAIConversation() {
+  const generation = aiSessionGeneration;
+  if (aiBootstrapGeneration === generation) return { ok:true, skipped:true };
+
+  const diagnostics = await diagnoseAIPage();
+  if (!diagnostics?.ok) return diagnostics;
+  if (diagnostics.authRequired) {
+    setAIBridgeState('AI_AUTH_REQUIRED', { action:'bridge.bootstrap' });
+    return { ok:false, reason:'AI_AUTH_REQUIRED', error:'Sign in to the selected AI service before using the direct local bridge.' };
+  }
+  if (diagnostics.state === 'NO_COMPOSER') {
+    return { ok:false, reason:'AI_INPUT_NOT_FOUND', error:'The AI composer is not ready yet.' };
+  }
+
+  const result = await sendTextToAI(ULAB_BRIDGE_BOOTSTRAP);
+  if (result?.ok && aiSessionGeneration === generation) {
+    aiBootstrapGeneration = generation;
+    setAIBridgeState('AI_CONNECTED', { action:'bridge.ready' });
+  }
+  return result;
 }
 
 async function readLatestAssistantText() {
@@ -503,8 +539,12 @@ async function openAISession(providerId, customUrl = '') {
   aiView.webContents.on('did-finish-load', () => {
     sendToRenderer('ai-session-status', { provider:providerId, status:'ready', url:aiView.webContents.getURL() });
     void startAIPolling();
+    void bootstrapAIConversation();
   });
-  aiView.webContents.on('did-navigate', () => { lastProcessedToolBlock = ''; });
+  aiView.webContents.on('did-navigate', () => {
+    lastProcessedToolBlock = '';
+    if (aiSessionGeneration !== aiBootstrapGeneration) void bootstrapAIConversation();
+  });
   resizeAIView();
   const pageLoad = new Promise(resolve => {
     let settled = false;
@@ -670,7 +710,7 @@ ipcMain.handle('mcp-config', async () => ({
 ipcMain.handle('mcp-diagnostics', async () => {
   const discover = await callMCP('server/discover', 'server/discover', {
     _meta:{
-      'io.modelcontextprotocol/clientInfo':{name:'ULAB Desktop',version:'3.10.7'},
+      'io.modelcontextprotocol/clientInfo':{name:'ULAB Desktop',version:'3.10.8'},
       'io.modelcontextprotocol/clientCapabilities':{},
     },
   });
