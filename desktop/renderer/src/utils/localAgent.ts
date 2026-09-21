@@ -69,7 +69,7 @@ export class LocalAgentManager {
   private token = '';
   private ws: WebSocket | null = null;
   private currentSession: WorkspaceSession | null = null;
-  private agentVersion = '3.10.4';
+  private agentVersion = '3.10.6';
   private defaultTimeoutMs = 8000;
   private capabilities: AgentCapabilities = { fileSystem:false, git:false, terminal:false, notifications:true };
   private pendingRequests = new Map<string,{resolve:(res:WebRpcResponse)=>void; timer:ReturnType<typeof setTimeout>}>();

@@ -1,6 +1,6 @@
 {
   "name": "ulab-agent",
-  "version": "3.10.5",
+  "version": "3.10.6",
   "description": "ULAB Local Agent for the Desktop application",
   "main": "dist/index.js",
   "scripts": {

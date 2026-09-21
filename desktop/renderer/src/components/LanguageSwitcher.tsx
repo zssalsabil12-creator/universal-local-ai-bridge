@@ -7,7 +7,7 @@ export default function LanguageSwitcher() {
   const { language, setLanguage } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
 
-  const languages: Language[] = ['ar', 'en', 'es', 'fr', 'ko', 'zh'];
+  const languages: Language[] = ['ar', 'en'];
 
   return (
     <div className="relative">

@@ -9,17 +9,32 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      try {
-        const desktop = window.ulabDesktop;
-        if (desktop?.isDesktop) {
-          const config = await desktop.agentConfig();
-          await localAgent.connect(config.url, config.token);
-        }
-      } finally {
+      const desktop = window.ulabDesktop;
+      if (!desktop?.isDesktop) {
         if (!cancelled) setBooting(false);
+        return;
       }
+
+      // The bundled Agent may need a short moment to bind localhost while the
+      // Electron window is starting. Retry health + WebSocket connection so
+      // users do not see a false "Agent offline" state during normal startup.
+      for (let attempt = 0; attempt < 12 && !cancelled; attempt += 1) {
+        try {
+          const health = await desktop.agentHealth();
+          if (health?.ok) {
+            const config = await desktop.agentConfig();
+            const connected = await localAgent.connect(config.url, config.token);
+            if (connected) break;
+          }
+        } catch {
+          // Retry below; the main process owns the Agent lifecycle.
+        }
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      if (!cancelled) setBooting(false);
     })();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; localAgent.disconnect(false); };
   }, []);
 
   if (booting) {

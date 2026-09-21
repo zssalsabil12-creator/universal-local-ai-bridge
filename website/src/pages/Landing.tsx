@@ -14,10 +14,11 @@ import CosmicBackground from '../components/CosmicBackground';
 import AdContainer from '../components/AdContainer';
 import DownloadSection from '../components/DownloadSection';
 import LegalModal from '../components/LegalModal';
+import ulabLogo from '../../assets/ulab-logo.png';
 
 function Navbar({ onLaunch }: { onLaunch: () => void }) {
   const { t } = useLanguage();
-  const downloadUrl = 'https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.5/ULAB-Setup-3.10.5-Windows-x64.exe';
+  const downloadUrl = 'https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.6/ULAB-Setup-3.10.6-Windows-x64.exe';
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -41,12 +42,10 @@ function Navbar({ onLaunch }: { onLaunch: () => void }) {
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-500/50">
-              <Zap className="w-6 h-6 text-white" />
-            </div>
-            <span className="font-black text-xl bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">ULAB</span>
-          </div>
+          <a href="#top" className="flex items-center gap-2.5" aria-label="ULAB home">
+            <img src={ulabLogo} alt="ULAB" className="h-9 w-9 object-contain rounded-xl" />
+            <span className="font-black text-xl tracking-[0.14em] text-white">ULAB</span>
+          </a>
 
           <div className="hidden md:flex items-center gap-6">
             {links.map(link => (
@@ -59,7 +58,7 @@ function Navbar({ onLaunch }: { onLaunch: () => void }) {
 
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
-            <a href={downloadUrl} download="ULAB-Setup-3.10.5-Windows-x64.exe" className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#111827]/80 border border-cyan-400/25 text-cyan-200 text-sm font-bold hover:border-cyan-300/50 hover:bg-cyan-400/10 transition-all">
+            <a href={downloadUrl} download="ULAB-Setup-3.10.6-Windows-x64.exe" className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#111827]/80 border border-cyan-400/25 text-cyan-200 text-sm font-bold hover:border-cyan-300/50 hover:bg-cyan-400/10 transition-all">
               <Download className="w-4 h-4" />
               {t('nav.download')}
             </a>
@@ -87,7 +86,7 @@ function Navbar({ onLaunch }: { onLaunch: () => void }) {
                   {link.label}
                 </a>
               ))}
-              <a href={downloadUrl} download="ULAB-Setup-3.10.5-Windows-x64.exe" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl border border-cyan-400/25 bg-cyan-400/10 text-cyan-200 text-sm font-bold">
+              <a href={downloadUrl} download="ULAB-Setup-3.10.6-Windows-x64.exe" onClick={() => setMobileOpen(false)} className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl border border-cyan-400/25 bg-cyan-400/10 text-cyan-200 text-sm font-bold">
                 <Download className="w-4 h-4" />
                 {t('nav.download')}
               </a>
@@ -130,7 +129,7 @@ function Hero({ onLaunch }: { onLaunch: () => void }) {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20">
-            <a href="https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.5/ULAB-Setup-3.10.5-Windows-x64.exe" download="ULAB-Setup-3.10.5-Windows-x64.exe" className="px-10 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 text-white font-bold text-lg hover:shadow-2xl hover:shadow-cyan-500/30 transition-all animate-pulse-glow">
+            <a href="https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.6/ULAB-Setup-3.10.6-Windows-x64.exe" download="ULAB-Setup-3.10.6-Windows-x64.exe" className="px-10 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 text-white font-bold text-lg hover:shadow-2xl hover:shadow-cyan-500/30 transition-all animate-pulse-glow">
               <span className="flex items-center gap-3">
                 <Download className="w-6 h-6" />
                 {t('hero.download')}
@@ -561,7 +560,7 @@ function RoadmapSection() {
 
 function CTASection({ onLaunch }: { onLaunch: () => void }) {
   const { t } = useLanguage();
-  const downloadUrl = 'https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.5/ULAB-Setup-3.10.5-Windows-x64.exe';
+  const downloadUrl = 'https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.6/ULAB-Setup-3.10.6-Windows-x64.exe';
 
   return (
     <section className="py-32 relative">
@@ -612,7 +611,7 @@ function CTASection({ onLaunch }: { onLaunch: () => void }) {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <motion.a
                   href={downloadUrl}
-                  download="ULAB-Setup-3.10.5-Windows-x64.exe"
+                  download="ULAB-Setup-3.10.6-Windows-x64.exe"
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
@@ -651,17 +650,15 @@ function CTASection({ onLaunch }: { onLaunch: () => void }) {
 }
 
 function Footer({ onOpenLegal }: { onOpenLegal: (tab: 'privacy' | 'terms' | 'about') => void }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   return (
     <footer className="py-16 border-t border-purple-500/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center gap-8">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-purple-500/50">
-              <Zap className="w-6 h-6 text-white" />
-            </div>
-            <span className="font-black text-2xl gradient-text">ULAB</span>
+            <img src={ulabLogo} alt="ULAB" className="w-11 h-11 object-contain rounded-xl" />
+            <span className="font-black text-2xl tracking-[0.14em] text-white">ULAB</span>
           </div>
 
           <p className="text-center text-[#94a3b8] max-w-2xl">
@@ -674,21 +671,21 @@ function Footer({ onOpenLegal }: { onOpenLegal: (tab: 'privacy' | 'terms' | 'abo
               className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#111118] border border-purple-500/30 hover:border-cyan-400/50 transition-all text-sm text-[#94a3b8] hover:text-white"
             >
               <Shield className="w-4 h-4 text-cyan-400" />
-              <span>Privacy Policy</span>
+              <span>{language === 'ar' ? 'سياسة الخصوصية' : 'Privacy Policy'}</span>
             </button>
             <button
               onClick={() => onOpenLegal('terms')}
               className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#111118] border border-purple-500/30 hover:border-purple-400/50 transition-all text-sm text-[#94a3b8] hover:text-white"
             >
               <Lock className="w-4 h-4 text-purple-400" />
-              <span>Terms</span>
+              <span>{language === 'ar' ? 'شروط الاستخدام' : 'Terms'}</span>
             </button>
             <button
               onClick={() => onOpenLegal('about')}
               className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#111118] border border-purple-500/30 hover:border-pink-400/50 transition-all text-sm text-[#94a3b8] hover:text-white"
             >
               <Globe className="w-4 h-4 text-pink-400" />
-              <span>Monetization</span>
+              <span>{language === 'ar' ? 'عن ULAB' : 'About ULAB'}</span>
             </button>
           </div>
 
@@ -698,7 +695,7 @@ function Footer({ onOpenLegal }: { onOpenLegal: (tab: 'privacy' | 'terms' | 'abo
 
           <div className="pt-8 border-t border-purple-500/20 w-full text-center">
             <p className="text-sm text-[#64748b]">
-              Universal Local AI Bridge — Desktop application with a bundled Local Agent and controlled workspace access
+              {language === 'ar' ? 'Universal Local AI Bridge — تطبيق سطح مكتب مزود بـ Local Agent مدمج ووصول مضبوط إلى مساحة العمل.' : 'Universal Local AI Bridge — Desktop application with a bundled Local Agent and controlled workspace access.'}
             </p>
           </div>
         </div>
@@ -717,7 +714,7 @@ export default function Landing({ onLaunch }: { onLaunch: () => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] relative">
+    <div id="top" className="min-h-screen bg-[#0a0a0f] relative">
       <CosmicBackground />
       <div className="relative z-10">
         <Navbar onLaunch={onLaunch} />

@@ -17,15 +17,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
     // Try to load from localStorage
     const stored = localStorage.getItem(STORAGE_KEY) as Language | null;
-    if (stored && ['ar', 'en', 'es', 'fr', 'ko', 'zh'].includes(stored)) {
+    if (stored === 'ar' || stored === 'en') {
       return stored;
     }
     
-    // Try to detect from browser language
+    // Detect only the two supported product languages.
     const browserLang = navigator.language.split('-')[0];
-    if (['ar', 'en', 'es', 'fr', 'ko', 'zh'].includes(browserLang)) {
-      return browserLang as Language;
-    }
+    if (browserLang === 'en') return 'en';
+    if (browserLang === 'ar') return 'ar';
     
     // Default to Arabic
     return 'ar';

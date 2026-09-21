@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Globe, ExternalLink, Workflow, Link2, RefreshCw, Shield, Lock, Copy, CheckCircle2
 } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 import { ContextResult, generateContextString } from '../utils/contextEngine';
 import { PROVIDERS, getAllProviders, ProviderAdapter } from '../utils/providerAdapters';
 
@@ -22,6 +23,7 @@ export default function CurrentAIBridgePanel({
   projectName,
   onPrepareContext,
 }: CurrentAIBridgePanelProps) {
+  const { t, language } = useLanguage();
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>('chatgpt');
   const [taskQuery, setTaskQuery] = useState(query);
   const [customUrl, setCustomUrl] = useState('');
@@ -72,17 +74,17 @@ export default function CurrentAIBridgePanel({
 
   const statusMeta: Record<string, { label: string; dot: string }> = {
     IDLE: { label: 'Ready', dot: 'is-live' },
-    AI_CONNECTED: { label: 'AI connected', dot: 'is-live' },
-    AGENT_CONNECTING: { label: 'Connecting agent', dot: 'is-busy' },
-    AGENT_CONNECTED: { label: 'Agent connected', dot: 'is-live' },
-    ACTION_DETECTED: { label: 'Action detected', dot: 'is-busy' },
-    VALIDATING: { label: 'Validating', dot: 'is-busy' },
-    RESULT_RETURNED: { label: 'Result returned', dot: 'is-live' },
-    AI_CONTINUES: { label: 'AI continuing', dot: 'is-live' },
-    APPROVAL_REQUIRED: { label: 'Approval required', dot: 'is-busy' },
-    AGENT_ERROR: { label: 'Attention required', dot: 'is-busy' },
-    AI_AUTH_REQUIRED: { label: 'Sign in to AI', dot: 'is-busy' },
-    AGENT_DISCONNECTED: { label: 'Agent offline', dot: 'is-busy' },
+    AI_CONNECTED: { label: language === 'ar' ? 'تم الاتصال بالذكاء الاصطناعي' : 'AI connected', dot: 'is-live' },
+    AGENT_CONNECTING: { label: language === 'ar' ? 'جارٍ الاتصال بـ Agent' : 'Connecting agent', dot: 'is-busy' },
+    AGENT_CONNECTED: { label: language === 'ar' ? 'Agent متصل' : 'Agent connected', dot: 'is-live' },
+    ACTION_DETECTED: { label: language === 'ar' ? 'تم اكتشاف إجراء' : 'Action detected', dot: 'is-busy' },
+    VALIDATING: { label: language === 'ar' ? 'جارٍ التحقق' : 'Validating', dot: 'is-busy' },
+    RESULT_RETURNED: { label: language === 'ar' ? 'تمت إعادة النتيجة' : 'Result returned', dot: 'is-live' },
+    AI_CONTINUES: { label: language === 'ar' ? 'الذكاء الاصطناعي يتابع' : 'AI continuing', dot: 'is-live' },
+    APPROVAL_REQUIRED: { label: language === 'ar' ? 'الموافقة مطلوبة' : 'Approval required', dot: 'is-busy' },
+    AGENT_ERROR: { label: language === 'ar' ? 'يتطلب الانتباه' : 'Attention required', dot: 'is-busy' },
+    AI_AUTH_REQUIRED: { label: language === 'ar' ? 'سجّل الدخول إلى AI' : 'Sign in to AI', dot: 'is-busy' },
+    AGENT_DISCONNECTED: { label: t('workspace.disconnected'), dot: 'is-busy' },
   };
 
   const currentStatus = statusMeta[bridgeState] || { label: bridgeState, dot: 'is-live' };

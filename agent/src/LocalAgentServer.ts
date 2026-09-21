@@ -106,6 +106,9 @@ export class LocalAgentServer {
     if (!origin || origin === 'null') return true;
     try {
       const parsed = new URL(origin);
+      // Electron production renderer loads from file://. Treat that origin as
+      // local-only while keeping all remote web origins blocked.
+      if (parsed.protocol === 'file:' && !parsed.hostname) return true;
       if (LocalAgentServer.ALLOWED_ORIGIN_HOSTS.has(parsed.hostname)) return true;
       return false;
     } catch {
@@ -212,8 +215,14 @@ export class LocalAgentServer {
         }
 
         if (req.url === '/mcp' && req.method === 'GET') {
-          res.writeHead(405, { 'Allow': 'POST', 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'ULAB MCP is request/response only; use POST /mcp' }));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            ok: true,
+            endpoint: '/mcp',
+            transport: 'HTTP JSON-RPC request/response',
+            message: 'ULAB MCP is available. Send JSON-RPC requests with POST /mcp.',
+            protocolVersions: ['2026-07-28', '2025-11-25'],
+          }));
           return;
         }
 
@@ -230,7 +239,7 @@ export class LocalAgentServer {
           res.end(
             JSON.stringify({
               status: 'ok',
-              version: '3.10.5',
+              version: '3.10.6',
               hasActiveWorkspace: !!this.currentSession,
               workspace: this.currentSession?.workspaceName || null,
             })

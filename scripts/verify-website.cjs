@@ -5,7 +5,7 @@ const root = path.resolve(__dirname, '..');
 const website = path.join(root, 'website');
 const indexFile = path.join(website, 'index.html');
 const distIndexFile = path.join(website, 'dist', 'index.html');
-const releaseDownloadUrl = 'https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.5/ULAB-Setup-3.10.5-Windows-x64.exe';
+const releaseDownloadUrl = 'https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.6/ULAB-Setup-3.10.6-Windows-x64.exe';
 
 const indexHtml = fs.readFileSync(indexFile, 'utf8');
 const landingSource = fs.readFileSync(path.join(website, 'src', 'pages', 'Landing.tsx'), 'utf8');
@@ -36,4 +36,4 @@ if (fs.existsSync(distIndexFile)) {
 }
 
 console.log('WEBSITE_CHECK=PASS');
-console.log('RELEASE_DOWNLOAD=v3.10.5');
+console.log('RELEASE_DOWNLOAD=v3.10.6');

@@ -18,6 +18,8 @@ async function main(): Promise<void> {
   const token = 'mcp-test-token';
   const agent = new LocalAgentServer({ port: PORT, token, initialWorkspaceRoot: root });
   const mcp = new ULABMCPServer(agent);
+  assert.equal(agent.isOriginAllowed('file:///C:/Program%20Files/ULAB/renderer/dist/index.html'), true);
+  assert.equal(agent.isOriginAllowed('https://example.com'), false);
 
   const cleanup = async () => {
     await agent.stop().catch(() => undefined);
@@ -160,7 +162,7 @@ async function main(): Promise<void> {
     }, modernHeaders);
     assert.equal(discoverHttp.status, 200);
     assert.ok(discoverHttp.body.result.supportedVersions.includes(MODERN));
-    assert.equal(discoverHttp.body._meta['io.modelcontextprotocol/serverInfo'].version, '3.10.5');
+    assert.equal(discoverHttp.body._meta['io.modelcontextprotocol/serverInfo'].version, '3.10.6');
 
     const listHttp = await httpRequest({
       jsonrpc: '2.0',
@@ -206,7 +208,8 @@ async function main(): Promise<void> {
     const getResponse = await fetch('http://127.0.0.1:' + PORT + '/mcp', {
       headers: { authorization: 'Bearer ' + token },
     });
-    assert.equal(getResponse.status, 405);
+    assert.equal(getResponse.status, 200);
+    assert.equal((await getResponse.json()).ok, true);
 
     const shutdownUnauthorized = await fetch('http://127.0.0.1:' + PORT + '/shutdown', { method:'POST' });
     assert.equal(shutdownUnauthorized.status, 401);
