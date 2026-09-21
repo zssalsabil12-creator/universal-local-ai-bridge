@@ -1,4 +1,4 @@
-﻿import * as WebSocket from 'ws';
+import * as WebSocket from 'ws';
 import * as http from 'http';
 import * as crypto from 'crypto';
 import { WorkspaceManager } from './WorkspaceManager';
@@ -239,7 +239,7 @@ export class LocalAgentServer {
           res.end(
             JSON.stringify({
               status: 'ok',
-              version: '3.10.6',
+              version: '3.10.7',
               hasActiveWorkspace: !!this.currentSession,
               workspace: this.currentSession?.workspaceName || null,
             })

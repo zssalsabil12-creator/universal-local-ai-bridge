@@ -13,7 +13,7 @@ interface CurrentAIBridgePanelProps {
   fileContents: Record<string, string>;
   query: string;
   projectName: string;
-  onPrepareContext: (query: string) => void;
+  onPrepareContext: (query: string) => Promise<{ context: ContextResult; fileContents: Record<string, string> } | null>;
 }
 
 export default function CurrentAIBridgePanel({
@@ -157,28 +157,49 @@ export default function CurrentAIBridgePanel({
   }, []);
 
   const sendContextDirect = async () => {
-    if (!context || !window.ulabDesktop?.isDesktop) return;
-    const payload = {
-      query,
-      projectName,
-      context: generateContextString(context, fileContents, query),
-    };
+    if (!window.ulabDesktop?.isDesktop || !taskQuery.trim()) return;
+
+    setBridgeState('AGENT_CONNECTING');
+
+    const prepared = await onPrepareContext(taskQuery.trim());
+    if (!prepared) {
+      setBridgeState('AGENT_ERROR');
+      return;
+    }
 
     const status: any = await window.ulabDesktop.aiStatus();
     if (!status?.open || !status.ready || status.provider !== selectedProvider) {
       const opened = await openProvider(selectedProvider);
-      if (opened && typeof opened === 'object' && (opened as any).ok === false) return;
+      if (!opened || (typeof opened === 'object' && (opened as any).ok === false)) {
+        setBridgeState('AGENT_ERROR');
+        return;
+      }
     }
+
+    setBridgeState('AI_CONNECTED');
+
+    const payload = {
+      query: taskQuery.trim(),
+      projectName,
+      context: generateContextString(prepared.context, prepared.fileContents, taskQuery.trim()),
+    };
 
     const result: any = await window.ulabDesktop.sendAIContext(payload);
     const sendResult = result?.result || result;
+
     if (sendResult?.reason === 'AI_AUTH_REQUIRED') {
       setBridgeState('AI_AUTH_REQUIRED');
-      const current = await window.ulabDesktop.aiDiagnostics();
-      setDiagnostics(current);
-    } else if (sendResult?.ok === false) {
-      setBridgeState('AGENT_ERROR');
+      setDiagnostics(await window.ulabDesktop.aiDiagnostics());
+      return;
     }
+
+    if (sendResult?.ok === false) {
+      setBridgeState('AGENT_ERROR');
+      setDiagnostics(await window.ulabDesktop.aiDiagnostics());
+      return;
+    }
+
+    setBridgeState('AI_CONTINUES');
   };
 
   return (
@@ -219,19 +240,19 @@ export default function CurrentAIBridgePanel({
           onKeyDown={e => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && taskQuery.trim()) {
               e.preventDefault();
-              onPrepareContext(taskQuery.trim());
+              void sendContextDirect();
             }
           }}
-          placeholder="مثال: افحص نظام المصادقة وحدد الملفات التي تحتاج تعديلًا..."
+          placeholder="اكتب ما تريد من AI أن ينفذه داخل مشروعك..."
           className="w-full min-h-20 px-3 py-2 rounded-lg bg-[#07070c] border border-[#2a2a3a] text-xs text-white placeholder:text-[#64748b] focus:border-cyan-500/50 focus:outline-none resize-none"
           dir="auto"
         />
         <button
-          onClick={() => taskQuery.trim() && onPrepareContext(taskQuery.trim())}
-          disabled={!taskQuery.trim()}
+          onClick={() => void sendContextDirect()}
+          disabled={!taskQuery.trim() || bridgeState === 'AGENT_CONNECTING' || bridgeState === 'VALIDATING'}
           className="w-full mt-2 px-3 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-cyan-500 text-white text-xs font-semibold disabled:opacity-40"
         >
-          تحليل المهمة وبناء السياق محليًا
+          {bridgeState === 'AGENT_CONNECTING' ? 'جارٍ تجهيز المهمة…' : 'إرسال المهمة إلى AI وبدء التنفيذ'}
         </button>
       </section>
 
@@ -453,7 +474,7 @@ export default function CurrentAIBridgePanel({
             className="ulab-btn ulab-btn-primary w-full mt-2"
           >
             <Link2 className="w-4 h-4" />
-            إرسال سياق المشروع مباشرة
+            إرسال المهمة والسياق إلى AI
           </button>
         </section>
       ) : (
@@ -461,7 +482,7 @@ export default function CurrentAIBridgePanel({
           <Globe className="w-8 h-8 text-indigo-400 mx-auto mb-2" />
           <p className="text-xs font-bold text-white">الجسر جاهز</p>
           <p className="text-[9px] text-[#71809f] mt-1">
-            افتح مجلد المشروع أولًا، ثم استخدم لوحة السياق لبناء سياق المهمة.
+            اكتب المهمة مباشرة. ULAB سيفتح جلسة AI عند الحاجة ويرسل المهمة مع أي سياق محلي متاح.
           </p>
         </section>
       )}

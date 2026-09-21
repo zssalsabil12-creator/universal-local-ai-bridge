@@ -886,37 +886,61 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
   };
 
   // Extract context
-  const handleExtractContext = async (query: string) => {
-    if (!projectIndex) return;
+  const handleExtractContext = async (query: string): Promise<{ context: ContextResult; fileContents: Record<string, string> } | null> => {
     setIsContextLoading(true);
     setLastQuery(query);
-    addLog('استخراج سياق', query);
+    addLog('تحضير مهمة AI', query);
 
     try {
-      // Simulate processing delay
-      await new Promise(r => setTimeout(r, 800));
+      // Natural-language tasks are valid even for a new or empty workspace.
+      if (!projectIndex) {
+        const emptyContext: ContextResult = {
+          files: [],
+          keywords: extractKeywords(query),
+          totalLines: 0,
+          estimatedTokens: 0,
+        };
+        setContext(emptyContext);
+        setActiveRightPanel('bridge');
+        return { context: emptyContext, fileContents: {} };
+      }
 
       const result = extractContext(projectIndex, query, 10, new Map(Object.entries(fileContents)));
-      setContext(result);
+      const nextFileContents: Record<string, string> = { ...fileContents };
 
-      // Load file contents required by the selected task context.
+      // Load only files selected by the local context engine.
       for (const file of result.files) {
-        if (!fileContents[file.path]) {
-          await handleReadFile(file.path);
+        if (nextFileContents[file.path]) continue;
+
+        if (window.ulabDesktop?.isDesktop && localAgent.getSession()) {
+          const read = await localAgent.readFile(file.path);
+          if (read.success && read.data) {
+            nextFileContents[file.path] = read.data.content;
+          }
+        } else if (dirHandle) {
+          try {
+            const handle = await findFileHandle(dirHandle, file.path);
+            if (handle && 'getFile' in handle) {
+              nextFileContents[file.path] = await readFileContent(handle as FileSystemFileHandle);
+            }
+          } catch (error) {
+            console.warn('Unable to preload context file', file.path, error);
+          }
         }
       }
 
-      addLog('سياق مستخرج', `${result.files.length} ملفات, ~${result.estimatedTokens} tokens`);
-      if (result.files.length === 0) {
-        notifications.warning('لا نتائج', 'لم يتم العثور على ملفات مطابقة — جرّب كلمات مختلفة');
-      }
+      setFileContents(nextFileContents);
+      setContext(result);
+      addLog('سياق محلي جاهز', `${result.files.length} ملفات, ~${result.estimatedTokens} tokens`);
+      setActiveRightPanel('bridge');
+      return { context: result, fileContents: nextFileContents };
     } catch (e) {
-      console.error('Context extraction failed:', e);
-      addLog('خطأ استخراج سياق', String(e));
-      notifications.error('فشل استخراج السياق', 'حدث خطأ أثناء البحث في المشروع');
+      console.error('Context preparation failed:', e);
+      addLog('خطأ تحضير المهمة', String(e));
+      notifications.error('فشل تحضير المهمة', 'تعذر تجهيز السياق المحلي للمهمة');
+      return null;
     } finally {
       setIsContextLoading(false);
-      setActiveRightPanel('context');
     }
   };
 
@@ -1450,7 +1474,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
           <Shield className="w-3 h-3" />
           {permissionMode === 'readonly' ? 'وضع القراءة' : permissionMode === 'assisted' ? 'بمساعدة' : 'وكيل'}
         </span>
-        <span>ULAB 3.10.6</span>
+        <span>ULAB 3.10.7</span>
         <span className="hidden sm:flex items-center gap-2 text-[#4a5568]">
           <span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+O</span> فتح
           <span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+F</span> بحث
