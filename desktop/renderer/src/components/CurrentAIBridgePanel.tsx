@@ -37,11 +37,14 @@ export default function CurrentAIBridgePanel({
   const [mcpStatus, setMcpStatus] = useState<any | null>(null);
   const [mcpBusy, setMcpBusy] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [compatibility, setCompatibility] = useState<any | null>(null);
+  const [compatibilityBusy, setCompatibilityBusy] = useState(false);
 
   useEffect(() => {
     const off = window.ulabDesktop?.onAIBridgeState?.((data: any) => {
       setBridgeState(data?.state || 'IDLE');
     });
+    const offCompatibility = window.ulabDesktop?.onAICompatibility?.((data: any) => { if(data?.stage==='complete') setCompatibility(data?.result || null); });
     const offAI = window.ulabDesktop?.onAIStatus?.((data: any) => {
       if (data?.status === 'closed' || data?.status === 'error' || data?.status === 'navigation-blocked') {
         setAiOpen(false);
@@ -53,7 +56,7 @@ export default function CurrentAIBridgePanel({
         }
       }
     });
-    return () => { off?.(); offAI?.(); };
+    return () => { off?.(); offAI?.(); offCompatibility?.(); };
   }, []);
 
   const providers: (ProviderAdapter & { id: AIProvider })[] = [

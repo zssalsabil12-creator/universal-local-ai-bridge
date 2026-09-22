@@ -811,6 +811,18 @@ async function processAIToolRequest(tool) {
     return;
   }
   if (tool.action === 'task.complete') {
+    if (activeAITask?.kind === 'live-smoke' && activeAITask.smokePath) {
+      const verify = await callAgent('files.read', { path: activeAITask.smokePath }, activeAITask.agentSessionId || undefined);
+      const actual = verify?.success ? String(verify.data?.content ?? '') : '';
+      if (!verify?.success || actual !== activeAITask.expectedContent) {
+        const message = 'Live smoke test was not verified on disk; completion was rejected.';
+        setAIBridgeState('AGENT_ERROR', { action:'bridge.task.complete', taskId:activeAITask.id, error:message });
+        sendToRenderer('ai-live-smoke', { state:'error', taskId:activeAITask.id, path:activeAITask.smokePath, error:message });
+        await sendTextToAI(toolResultPrompt(tool, { success:false, error:{ code:'SMOKE_TEST_VERIFICATION_FAILED', message } }));
+        return;
+      }
+      sendToRenderer('ai-live-smoke', { state:'passed', taskId:activeAITask.id, path:activeAITask.smokePath, verification:{readSuccess:true,contentMatches:true} });
+    }
     const completedTaskId = activeAITask?.id || null;
     const summary = String(tool.params?.summary || tool.params?.message || 'Task completed').trim().slice(0, 1000);
     activeAITask = null;
@@ -1360,6 +1372,8 @@ ipcMain.handle('ai-status', async () => {
   };
 });
 ipcMain.handle('ai-diagnostics', async () => diagnoseAIPage());
+ipcMain.handle('ai-compatibility-check', async (_event, options) => runAICompatibilityCheck({live:options?.live===true}));
+ipcMain.handle('ai-live-smoke-test', async () => startAILiveSmokeTest());
 ipcMain.handle('ai-send-text', async (_event, text) => ({ result: await sendTextToAI(String(text || '')) }));
 
 function parsePreviewUrl(text) {
