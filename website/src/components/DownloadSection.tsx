@@ -14,8 +14,8 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 
-const INSTALLER_URL = 'https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.8/ULAB-Setup-3.10.8-Windows-x64.exe';
-const VERSION = '3.10.8';
+const INSTALLER_URL = 'https://github.com/zssalsabil12-creator/universal-local-ai-bridge/releases/download/v3.10.9/ULAB-Setup-3.10.9-Windows-x64.exe';
+const VERSION = '3.10.9';
 const INSTALLER_SIZE = '~122 MB';
 
 export default function DownloadSection() {
@@ -93,7 +93,7 @@ export default function DownloadSection() {
               <div className="mt-auto flex flex-col sm:flex-row gap-3">
                 <a
                   href={INSTALLER_URL}
-                  download="ULAB-Setup-3.10.8-Windows-x64.exe"
+                  download="ULAB-Setup-3.10.9-Windows-x64.exe"
                   className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 text-white font-black text-lg shadow-2xl shadow-purple-500/20 hover:shadow-cyan-500/30 hover:-translate-y-0.5 transition-all"
                 >
                   <Download className="w-5 h-5" />
