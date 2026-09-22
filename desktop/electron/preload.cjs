@@ -43,5 +43,15 @@ contextBridge.exposeInMainWorld('ulabDesktop', {
     const handler = (_event, data) => callback(data);
     ipcRenderer.on('ai-tool-status', handler);
     return () => ipcRenderer.removeListener('ai-tool-status', handler);
+  },
+  onAIAgentTask: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('ai-agent-task', handler);
+    return () => ipcRenderer.removeListener('ai-agent-task', handler);
+  },
+  onAISessionVisibility: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('ai-session-visibility', handler);
+    return () => ipcRenderer.removeListener('ai-session-visibility', handler);
   }
 });

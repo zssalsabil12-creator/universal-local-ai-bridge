@@ -1,6 +1,6 @@
 const SAFE_AI_ACTIONS = new Set([
   'workspace.session', 'files.read', 'files.list', 'files.search', 'files.propose',
-  'git.status', 'git.diff', 'context.build', 'audit.log'
+  'git.status', 'git.diff', 'context.build', 'audit.log', 'task.progress', 'task.complete'
 ]);
 
 const HUMAN_APPROVAL_ACTIONS = new Set([

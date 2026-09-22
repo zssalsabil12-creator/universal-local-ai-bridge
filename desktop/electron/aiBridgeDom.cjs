@@ -25,6 +25,22 @@ function browserScript(body) {
   return '(() => {' + body + '})()';
 }
 
+function buildInstallULABSanitizerScript() {
+  return '(() => {' +
+    'const INTERNAL_MARKERS = ["ULAB Desktop bridge is active","ULAB BRIDGE BOOTSTRAP","ULAB ACTIVE WORK TASK","ULAB TOOL RESULT","ULAB EXECUTION RECOVERY","ULAB WORKSPACE CONTEXT"];' +
+    'const actions = new Set(["workspace.session","files.read","files.list","files.search","files.propose","files.create","files.write","files.delete","git.status","git.diff","git.commit","git.push","terminal.execute","testing.run","context.build","audit.log","task.progress","task.complete"]);' +
+    'const normalize = value => String(value || "").replaceAll("\\n", " ").replaceAll("\\r", " ").trim();' +
+    'const roots = () => { const list=[document]; for(let i=0;i<list.length;i++){ try{ list[i].querySelectorAll("*").forEach(node=>{ if(node.shadowRoot && !list.includes(node.shadowRoot)) list.push(node.shadowRoot); }); }catch{} } return list; };' +
+    'const collect=(root,selector)=>{ try{return Array.from(root.querySelectorAll(selector));}catch{return[];} };' +
+    'const hide=node=>{ if(!node || node.nodeType!==1) return; try{ node.style.setProperty("display","none","important"); node.setAttribute("data-ulab-hidden","true"); }catch{} };' +
+    'const assistantLike=node=>{ const meta=[node.getAttribute?.("data-message-author-role"),node.getAttribute?.("data-role"),node.getAttribute?.("data-author"),node.getAttribute?.("role"),node.getAttribute?.("aria-label"),node.getAttribute?.("data-testid"),node.className].filter(Boolean).join(" ").toLowerCase(); return /assistant|response|model/.test(meta); };' +
+    'const inspect=()=>{ const allRoots=roots(); const messageNodes=[]; const codeNodes=[]; for(const root of allRoots){ messageNodes.push(...collect(root,"[data-message-author-role]"),...collect(root,"[data-role]"),...collect(root,"[data-author]"),...collect(root,"[role=\\\"assistant\\\"]"),...collect(root,"[role=\\\"article\\\"]"),...collect(root,"main article"),...collect(root,"main [data-testid*=\\\"message\\\"]")); codeNodes.push(...collect(root,"pre"),...collect(root,"pre code"),...collect(root,"[data-language]"),...collect(root,"[data-code-language]")); } for(const node of Array.from(new Set(messageNodes))){ const text=normalize(node.innerText||node.textContent); if(!text||text.length>180000) continue; if(INTERNAL_MARKERS.some(marker=>text.includes(marker))){hide(node);continue;} if(assistantLike(node)){ const matches=text.match(/\\{[\\s\\S]{0,65536}\\}/g)||[]; for(const candidate of matches){ try{ const parsed=JSON.parse(candidate); if(parsed && typeof parsed==="object" && actions.has(parsed.action)){hide(node);break;} }catch{} } } } for(const node of Array.from(new Set(codeNodes))){ const raw=normalize(node.textContent||node.innerText); if(!raw||raw.length>70000) continue; if(INTERNAL_MARKERS.some(marker=>raw.includes(marker))){hide(node.closest("pre")||node);continue;} try{ const parsed=JSON.parse(raw); if(parsed && typeof parsed==="object" && actions.has(parsed.action)){ let target=node; for(let i=0;target&&i<8;i++,target=target.parentElement){ if(assistantLike(target)){hide(target);break;} } } }catch{} } return {ok:true}; };' +
+    'inspect();' +
+    'if(!window.__ULAB_SANITIZER_INSTALLED__){ window.__ULAB_SANITIZER_INSTALLED__=true; const observer=new MutationObserver(()=>{clearTimeout(window.__ULAB_SANITIZER_TIMER__);window.__ULAB_SANITIZER_TIMER__=setTimeout(inspect,35);}); try{observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});}catch{} }' +
+    'return {ok:true,installed:true};' +
+  '})()';
+}
+
 function buildAIInteractionScript(text) {
   const inputSelectors = JSON.stringify(INPUT_SELECTORS);
   const sendSelectors = JSON.stringify(SEND_SELECTORS);
@@ -343,7 +359,7 @@ function buildHideULABControlScript() {
 
 function buildHideULABToolCallScript() {
   return `(() => {
-    const allowedActions = new Set(['files.read','files.list','files.search','files.propose','files.create','files.write','files.delete','git.status','git.diff','git.commit','git.push','terminal.execute','testing.run','context.build','audit.log','workspace.session']);
+    const allowedActions = new Set(['files.read','files.list','files.search','files.propose','files.create','files.write','files.delete','git.status','git.diff','git.commit','git.push','terminal.execute','testing.run','context.build','audit.log','workspace.session','task.progress','task.complete']);
     const roots = [document];
     for (let i = 0; i < roots.length; i++) {
       try { roots[i].querySelectorAll('*').forEach(node => { if (node.shadowRoot && !roots.includes(node.shadowRoot)) roots.push(node.shadowRoot); }); } catch {}
@@ -373,7 +389,7 @@ function buildHideULABToolCallScript() {
 
 function buildHideULABAssistantRequestScript() {
   return `(() => {
-    const allowedActions = new Set(['files.read','files.list','files.search','files.propose','files.create','files.write','files.delete','git.status','git.diff','git.commit','git.push','terminal.execute','testing.run','context.build','audit.log','workspace.session']);
+    const allowedActions = new Set(['files.read','files.list','files.search','files.propose','files.create','files.write','files.delete','git.status','git.diff','git.commit','git.push','terminal.execute','testing.run','context.build','audit.log','workspace.session','task.progress','task.complete']);
     const roots = [document];
     for (let i = 0; i < roots.length; i++) {
       try { roots[i].querySelectorAll('*').forEach(node => { if (node.shadowRoot && !roots.includes(node.shadowRoot)) roots.push(node.shadowRoot); }); } catch {}
@@ -438,7 +454,7 @@ function buildLatestAIToolBlockScript() {
     const allowedActions = new Set([
       'files.read','files.list','files.search','files.propose',
       'files.create','files.write','files.delete','git.status','git.diff','git.commit','git.push',
-      'terminal.execute','testing.run','context.build','audit.log','workspace.session'
+      'terminal.execute','testing.run','context.build','audit.log','workspace.session','task.progress','task.complete'
     ]);
     const fenceMark = String.fromCharCode(96).repeat(3);
     const fence = fenceMark + 'ulab-tool\\n';
@@ -493,4 +509,4 @@ function buildLatestAIToolBlockScript() {
   })()`;
 }
 
-module.exports = { INPUT_SELECTORS, SEND_SELECTORS, ASSISTANT_SELECTORS, buildAIInteractionScript, buildAIProbeScript, buildAssistantTextScript, buildLatestUserTextScript, buildLatestAIToolBlockScript, buildHideULABControlScript, buildHideULABToolCallScript, buildHideULABAssistantRequestScript, browserScript };
+module.exports = { INPUT_SELECTORS, SEND_SELECTORS, ASSISTANT_SELECTORS, buildAIInteractionScript, buildAIProbeScript, buildAssistantTextScript, buildLatestUserTextScript, buildLatestAIToolBlockScript, buildHideULABControlScript, buildHideULABToolCallScript, buildHideULABAssistantRequestScript, buildInstallULABSanitizerScript, browserScript };

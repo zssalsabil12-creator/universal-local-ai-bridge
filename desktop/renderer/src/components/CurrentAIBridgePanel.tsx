@@ -36,6 +36,7 @@ export default function CurrentAIBridgePanel({
   const [mcpConfig, setMcpConfig] = useState<{ endpoint:string; protocolVersion:string; bearerToken:string; scope:string; stdioCommand:string } | null>(null);
   const [mcpStatus, setMcpStatus] = useState<any | null>(null);
   const [mcpBusy, setMcpBusy] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     const off = window.ulabDesktop?.onAIBridgeState?.((data: any) => {
@@ -371,7 +372,16 @@ export default function CurrentAIBridgePanel({
       )}
 
       {window.ulabDesktop?.isDesktop && (
-        <section className="p-3 rounded-xl bg-cyan-500/5 border border-cyan-500/20">
+        <>
+          <button
+            onClick={() => setShowAdvanced(value => !value)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white/[0.025] border border-white/[0.07] text-[10px] text-[#9aa9c1] hover:text-white hover:bg-white/[0.04] transition-colors"
+          >
+            <span>{ui('خيارات متقدمة وتشخيص', 'Advanced options & diagnostics')}</span>
+            <span className="text-[9px] text-[#64748b]">{showAdvanced ? ui('إخفاء', 'Hide') : ui('عرض', 'Show')}</span>
+          </button>
+          {showAdvanced && (
+            <section className="p-3 rounded-xl bg-cyan-500/5 border border-cyan-500/20">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Globe className="w-4 h-4 text-cyan-300" />
@@ -472,6 +482,8 @@ export default function CurrentAIBridgePanel({
             {ui('لا تشارك Bearer token أو أمر الاتصال خارج جهازك.', 'Never share the Bearer token or connection command outside this device.')}
           </p>
         </section>
+          )}
+        </>
       )}
 
       {context ? (

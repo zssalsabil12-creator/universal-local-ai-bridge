@@ -553,6 +553,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
   const [aiBridgeActivity, setAIBridgeActivity] = useState<{ state: string; action: string }>({ state: 'IDLE', action: '' });
   const [aiActivityLog, setAIActivityLog] = useState<Array<{ timestamp: number; status: string; action: string; path?: string }>>([]);
   const [workspaceRevision, setWorkspaceRevision] = useState(0);
+  const [agentTask, setAgentTask] = useState<{ state:string; taskId:string; prompt:string; stage:string; message:string; progress:number|null; summary:string }>({ state:'idle', taskId:'', prompt:'', stage:'', message:'', progress:null, summary:'' });
   const [previewRefreshing, setPreviewRefreshing] = useState(false);
   const [lastQuery, setLastQuery] = useState('');
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
@@ -1098,6 +1099,33 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
   }, [refreshWorkspaceSnapshot]);
 
   useEffect(() => {
+    const desktop = window.ulabDesktop;
+    if (!desktop?.isDesktop || !desktop.onAIAgentTask) return;
+    const off = desktop.onAIAgentTask((raw: unknown) => {
+      const data = raw as any;
+      const phase = String(data?.state || '');
+      if (phase === 'started') {
+        setAgentTask({ state:'working', taskId:String(data?.taskId || ''), prompt:String(data?.prompt || ''), stage:'', message:'Starting…', progress:null, summary:'' });
+        setActiveRightPanel('developer');
+        setAIBridgeActivity({ state:'WORKING', action:'agent.task' });
+        addLog(ui('بدأ الوكيل العمل','Agent started working'), String(data?.prompt || '').slice(0, 180));
+      } else if (phase === 'progress') {
+        setAgentTask(prev => ({ ...prev, state:'working', stage:String(data?.stage || prev.stage), message:String(data?.message || prev.message), progress:Number.isFinite(Number(data?.progress)) ? Number(data.progress) : prev.progress }));
+      } else if (phase === 'completed') {
+        setAgentTask(prev => ({ ...prev, state:'completed', progress:100, message:'Completed', summary:String(data?.summary || 'Task completed') }));
+        setWorkspaceRevision(v => v + 1);
+        void refreshWorkspaceSnapshot();
+        setActiveRightPanel('preview');
+        setAIBridgeActivity({ state:'AI_CONNECTED', action:'bridge.task.complete' });
+      } else if (phase === 'error') {
+        setAgentTask(prev => ({ ...prev, state:'error', message:String(data?.error || 'The task could not continue.') }));
+        setAIBridgeActivity({ state:'AGENT_ERROR', action:'agent.task' });
+      }
+    });
+    return () => off?.();
+  }, [refreshWorkspaceSnapshot]);
+
+  useEffect(() => {
     if (workspacePermissionId) {
       const loaded = loadWorkspacePermissions(workspacePermissionId);
       setPermissionConfig(loaded);
@@ -1221,6 +1249,13 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
             <Network className="w-3.5 h-3.5" />
             <span>AI Bridge</span>
           </button>
+
+          {['WORKING', 'ACTION_DETECTED', 'VALIDATING', 'AGENT_CONNECTING', 'AGENT_CONNECTED', 'AI_CONTINUES', 'APPROVAL_REQUIRED'].includes(aiBridgeActivity.state) && (
+            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/5 border border-cyan-400/20 text-cyan-200 text-[10px] font-semibold" title={ui('ULAB ينفذ المهمة داخل مساحة العمل', 'ULAB is executing the task inside the workspace')}>
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 animate-pulse" />
+              <span>{aiBridgeActivity.state === 'APPROVAL_REQUIRED' ? ui('بانتظار الموافقة', 'Awaiting approval') : ui('الوكيل يعمل...', 'Agent working...')}</span>
+            </div>
+          )}
 
           {/* Live Project Preview */}
           <button
@@ -1360,6 +1395,27 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
 
         {/* Center - Code Viewer */}
         <div className="ulab-editor flex-1 flex flex-col overflow-hidden">
+          {agentTask.state !== 'idle' && (
+            <div className={`flex-shrink-0 px-4 py-2 border-b ${agentTask.state === 'error' ? 'border-red-400/20 bg-red-500/[0.035]' : agentTask.state === 'completed' ? 'border-emerald-400/20 bg-emerald-500/[0.035]' : 'border-cyan-400/15 bg-cyan-500/[0.025]'}`}>
+              <div className="flex items-center gap-3 min-w-0">
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${agentTask.state === 'error' ? 'bg-red-400' : agentTask.state === 'completed' ? 'bg-emerald-400' : 'bg-cyan-300 animate-pulse'}`} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[10px] font-black uppercase tracking-[0.13em] text-white">
+                      {agentTask.state === 'completed' ? ui('اكتملت المهمة', 'Task completed') : agentTask.state === 'error' ? ui('توقفت المهمة', 'Task stopped') : ui('الوكيل يعمل', 'Agent working')}
+                    </span>
+                    {agentTask.stage && <span className="text-[9px] text-[#6f819d] truncate" dir="ltr">{agentTask.stage}</span>}
+                  </div>
+                  <p className="text-[10px] text-[#91a2bd] truncate mt-0.5">{agentTask.state === 'completed' ? agentTask.summary || ui('المعاينة جاهزة', 'Preview is ready') : agentTask.message}</p>
+                </div>
+                {agentTask.progress !== null && agentTask.state === 'working' && (
+                  <div className="w-20 h-1 rounded-full bg-white/[0.06] overflow-hidden flex-shrink-0">
+                    <div className="h-full bg-cyan-300 rounded-full transition-all" style={{ width:`${agentTask.progress}%` }} />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           {selectedFile ? (
             <div className="flex-1 overflow-hidden">
               <CodeViewer content={fileContent || ui('جاري التحميل...', 'Loading...')} filename={selectedFile} />
@@ -1622,8 +1678,22 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
               }
               const result: any = await window.ulabDesktop.aiApprove(aiRequestId, false);
               if (!result?.success) {
-                notifications.error('فشل التنفيذ', result?.error?.message || 'تعذر تنفيذ العملية بعد الموافقة');
-                addLog('فشل موافقة AI', String(pendingApproval.resource));
+                const code = String(result?.error?.code || '');
+                if (code === 'INVALID_REQUEST' || code === 'APPROVAL_CONTEXT_STALE' || code === 'APPROVAL_EXPIRED') {
+                  notifications.warning(
+                    ui('انتهت هذه الموافقة؛ لم يتم تنفيذ العملية.', 'This approval is no longer active; the operation was not executed.'),
+                    ui('أعد إرسال المهمة ليُنشئ ULAB طلب موافقة جديدًا عند الحاجة.', 'Resend the task and ULAB will create a fresh approval request when needed.')
+                  );
+                  addLog(ui('انتهت موافقة AI','AI approval expired'), String(pendingApproval.resource));
+                  setPendingApproval(null);
+                  return;
+                }
+                notifications.error(
+                  ui('تعذر تنفيذ العملية','Operation could not be completed'),
+                  ui('لم يتم تطبيق أي تغيير إضافي. تحقق من حالة المهمة ثم حاول مرة أخرى.', 'No additional change was applied. Check the task state and retry.')
+                );
+                addLog(ui('تعذر تنفيذ موافقة AI','AI approval could not execute'), String(pendingApproval.resource));
+                setPendingApproval(null);
                 return;
               }
               addLog('Approved AI operation', `${pendingApproval.type} - ${pendingApproval.resource}`);
@@ -1699,7 +1769,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
           <Shield className="w-3 h-3" />
           {permissionMode === 'readonly' ? ui('وضع القراءة','Read-only') : permissionMode === 'assisted' ? ui('بمساعدة','Assisted') : ui('وكيل','Agent')}
         </span>
-        <span>ULAB 3.10.8</span>
+        <span>ULAB 3.10.10</span>
         <span className="hidden sm:flex items-center gap-2 text-[#4a5568]">
           <span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+O</span> {ui('فتح','Open')}
           <span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+F</span> {ui('بحث','Search')}

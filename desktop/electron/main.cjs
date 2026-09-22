@@ -12,7 +12,7 @@ const { spawn } = require('child_process');
 const WebSocket = require('ws');
 const { getAIToolDisposition, extractAIToolRequest, isTrustedAIUrl, createAIToolApprovalContext, validateAIToolApprovalContext, AI_APPROVAL_TTL_MS } = require('./aiBridgeSecurity.cjs');
 const { isUsableAIWebContents } = require('./aiBridgeRuntime.cjs');
-const { buildAIInteractionScript, buildAIProbeScript, buildAssistantTextScript, buildLatestUserTextScript, buildLatestAIToolBlockScript, buildHideULABControlScript, buildHideULABToolCallScript, buildHideULABAssistantRequestScript } = require('./aiBridgeDom.cjs');
+const { buildAIInteractionScript, buildAIProbeScript, buildAssistantTextScript, buildLatestUserTextScript, buildLatestAIToolBlockScript, buildHideULABControlScript, buildHideULABToolCallScript, buildHideULABAssistantRequestScript, buildInstallULABSanitizerScript } = require('./aiBridgeDom.cjs');
 const { isLocalProjectWorkRequest } = require('./aiBridgeIntent.cjs');
 const { shouldRecoverBridgeControl: shouldRecoverBridgeControlFromModule } = require('./aiBridgeRecovery.cjs');
 let agentProcess = null;
@@ -220,6 +220,7 @@ let activeAITask = null;
 const pendingAIToolRequests = new Map();
 let aiSessionGeneration = 0;
 let aiBootstrapGeneration = -1;
+let aiViewVisible = true;
 
 const ULAB_BRIDGE_BOOTSTRAP = [
   'ULAB Desktop bridge is active for this AI conversation.',
@@ -231,7 +232,7 @@ const ULAB_BRIDGE_BOOTSTRAP = [
   '\`\`\`ulab-tool',
   '{"action":"files.read","params":{"path":"relative/path"}}',
   '\`\`\`',
-  'Supported actions: workspace.session, files.read, files.list, files.search, files.propose, files.create, files.write, files.delete, git.status, git.diff, git.commit, git.push, terminal.execute, testing.run, context.build, audit.log. Approval and rejection are human-only ULAB controls and must never be requested by the AI as tool calls.',
+  'Supported actions: workspace.session, files.read, files.list, files.search, files.propose, files.create, files.write, files.delete, git.status, git.diff, git.commit, git.push, terminal.execute, testing.run, context.build, audit.log, task.progress, task.complete. Approval and rejection are human-only ULAB controls and must never be requested by the AI as tool calls.',
   'ULAB watches rendered assistant code blocks, executes one valid tool call at a time, and returns the real result into this same conversation.',
   'Never claim a local action was executed until ULAB returns a real ULAB TOOL RESULT.',
   'If a requested mutation or command needs approval, issue the tool call normally. ULAB will display the approval request to the human and automatically continue the same task after approval or rejection.',
@@ -271,6 +272,20 @@ function resizeAIView() {
     width: Math.max(460, width - leftReserve - rightReserve),
     height: Math.max(400, height - topReserve),
   });
+}
+
+function setAIViewVisible(visible) {
+  aiViewVisible = !!visible;
+  if (!aiView) return;
+  try {
+    aiView.setVisible(aiViewVisible);
+    if (aiViewVisible) resizeAIView();
+  } catch {
+    // Electron 44 supports View#setVisible; keep the fallback harmless for
+    // older packaged runtimes during upgrades.
+    if (aiViewVisible) resizeAIView();
+  }
+  sendToRenderer('ai-session-visibility', { visible: aiViewVisible });
 }
 
 function aiInjectionScript(payload) {
@@ -386,8 +401,9 @@ function isInjectedUserMessage(text) {
   return injectedUserMessages.has(normalizeInjectedMessage(text));
 }
 
-function taskExecutionKickoffPrompt(task, snapshot) {
+function taskExecutionKickoffPrompt(task, snapshot, contextText = '') {
   const safeSnapshot = JSON.stringify(snapshot || {}, null, 2).slice(0, 90000);
+  const safeContext = String(contextText || '').trim().slice(0, 140000);
   return [
     'ULAB ACTIVE WORK TASK',
     'The human just asked you to perform work inside the local ULAB workspace.',
@@ -397,13 +413,17 @@ function taskExecutionKickoffPrompt(task, snapshot) {
     'Start with the next required local tool call now. Emit exactly one fenced ulab-tool block and wait for ULAB TOOL RESULT before issuing the next tool call.',
     'For a project-wide task, begin with workspace.session or files.list. For a known file, use files.read. For code changes, read the relevant files first, then use files.write or files.create when the change is ready.',
     'For npm/build/test/dev-server work, use terminal.execute with the command and args; ULAB will enforce workspace scope and approval policy.',
+    'You may emit exactly one task.progress meta-action between real operations to update ULAB with a short human-readable stage message. This action never touches the project.',
+    'When every requested operation is verified complete, emit exactly one task.complete meta-action with a concise summary. This is the authoritative completion signal.',
     'Never claim that anything changed or ran until ULAB TOOL RESULT confirms it.',
     'Do not answer a local project task by drafting content for the human to copy and paste. Put the requested artifact/change into the workspace through ULAB tools whenever the task calls for a project edit or creation.',
     'Human task:',
     String(task || '').trim().slice(0, 16000),
     'Attached workspace snapshot:',
-    safeSnapshot
-  ].join('\\n');
+    safeSnapshot,
+    safeContext ? 'Relevant project context already prepared by ULAB:\n' + safeContext : '',
+    'When the task is fully complete, your final response must begin with ULAB_TASK_COMPLETE followed by a normal concise summary. This marker is an internal ULAB control signal and must not ask the human to copy or run anything.'
+  ].filter(Boolean).join('\\n');
 }
 
 
@@ -503,7 +523,141 @@ function toolResultPrompt(tool, result) {
       message: 'Tool result was truncated to keep the AI session responsive.'
     }, null, 2);
   }
-  return 'ULAB TOOL RESULT\n```json\n' + serialized + '\n```\nContinue the task. Do not repeat the same tool call unless the result requires a retry.';
+  return 'ULAB TOOL RESULT\n```json\n' + serialized + '\n```\nContinue the task. Do not repeat the same tool call unless the result requires a retry. When every requested operation is complete, begin your final response with ULAB_TASK_COMPLETE followed by a concise normal summary.';
+}
+
+
+function tokenizeTerminalLine(line) {
+  const tokens = [];
+  const re = /"([^"]*)"|'([^']*)'|(\S+)/g;
+  let match;
+  while ((match = re.exec(String(line || '')))) tokens.push(match[1] ?? match[2] ?? match[3]);
+  return tokens;
+}
+
+function splitTerminalSequence(tool) {
+  if (tool?.action !== 'terminal.execute') return null;
+  const params = tool.params || {};
+  const line = [params.command, ...(Array.isArray(params.args) ? params.args : [])]
+    .filter(value => typeof value === 'string' && value.length > 0)
+    .join(' ')
+    .trim();
+  if (!line || !/[;&]/.test(line)) return null;
+  if (/[|<>\n\r]|\$\(|\|\|/.test(line)) return null;
+
+  const parts = [];
+  const operators = [];
+  let current = '';
+  let quote = null;
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (quote) {
+      current += ch;
+      if (ch === quote && line[i - 1] !== '\\') quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      current += ch;
+      continue;
+    }
+    if (ch === ';') {
+      if (current.trim()) parts.push(current.trim());
+      current = '';
+      operators.push(';');
+      continue;
+    }
+    if (ch === '&' && line[i + 1] === '&') {
+      if (current.trim()) parts.push(current.trim());
+      current = '';
+      operators.push('&&');
+      i += 1;
+      continue;
+    }
+    current += ch;
+  }
+  if (current.trim()) parts.push(current.trim());
+  if (quote || parts.length < 2 || operators.length !== parts.length - 1) return null;
+
+  const steps = parts.map(tokenizeTerminalLine).filter(step => step.length > 0);
+  if (steps.length !== parts.length) return null;
+  return { steps, operators };
+}
+
+const CLEARLY_SAFE_TERMINAL = [
+  /^git\s+(status|diff|log)$/i,
+  /^npm\s+test(?:\s+--\s+--watchAll=false)?$/i,
+  /^npm\s+run\s+(test|lint|build|typecheck)$/i,
+  /^yarn\s+(test|lint|build)$/i,
+  /^pnpm\s+(test|lint|build)$/i,
+  /^cargo\s+(test|check)$/i,
+  /^pytest$/i,
+  /^go\s+test(?:\s+\.\s*\/\.\s*\.)?$/i,
+];
+
+function isClearlySafeTerminalStep(step) {
+  const line = step.join(' ').trim();
+  return CLEARLY_SAFE_TERMINAL.some(pattern => pattern.test(line));
+}
+
+async function executeTerminalSequence(tool, sessionId) {
+  const plan = splitTerminalSequence(tool);
+  if (!plan) return null;
+
+  const allClearlySafe = plan.steps.every(isClearlySafeTerminalStep);
+  if (!allClearlySafe && !tool.params?.approved) {
+    return {
+      needsApproval: true,
+      result: {
+        success: false,
+        error: {
+          code: 'APPROVAL_REQUIRED',
+          message: 'A multi-step terminal operation requires one ULAB approval before any step is executed.'
+        }
+      }
+    };
+  }
+
+  const stepResults = [];
+  for (let i = 0; i < plan.steps.length; i += 1) {
+    const [command, ...args] = plan.steps[i];
+    const result = await callAgent('terminal.execute', {
+      command,
+      args,
+      approved: !!tool.params?.approved
+    }, sessionId);
+    stepResults.push({
+      step: i + 1,
+      operatorBefore: i === 0 ? null : plan.operators[i - 1],
+      command,
+      args,
+      success: !!result.success,
+      data: result.data,
+      error: result.error
+    });
+    if (!result.success) {
+      return {
+        needsApproval: result.error?.code === 'APPROVAL_REQUIRED' && !tool.params?.approved,
+        result: {
+          success: false,
+          error: result.error,
+          data: { sequence: stepResults, completedSteps: i }
+        }
+      };
+    }
+  }
+
+  return {
+    needsApproval: false,
+    result: {
+      success: stepResults.every(step => step.success),
+      data: {
+        sequence: stepResults,
+        completedSteps: stepResults.length,
+        totalSteps: plan.steps.length
+      }
+    }
+  };
 }
 
 async function executeAIToolRequest(tool, fingerprint) {
@@ -514,7 +668,25 @@ async function executeAIToolRequest(tool, fingerprint) {
     return { success:false, error:{ code:'WORKSPACE_NOT_FOUND', message:status.error?.message || 'Select a workspace first' } };
   }
   setAIBridgeState('VALIDATING', { action:tool.action });
-  const result = await callAgent(tool.action, tool.params || {}, status.data.sessionId);
+
+  let result;
+  if (tool.action === 'terminal.execute') {
+    const sequence = await executeTerminalSequence(tool, status.data.sessionId);
+    if (sequence?.needsApproval) {
+      queueAIToolApproval(tool, fingerprint, status.data.sessionId);
+      return sequence.result;
+    }
+    result = sequence?.result || await callAgent(tool.action, tool.params || {}, status.data.sessionId);
+  } else {
+    result = await callAgent(tool.action, tool.params || {}, status.data.sessionId);
+  }
+
+  if (!result.success && result.error?.code === 'APPROVAL_REQUIRED' && !tool.params?.approved &&
+      (tool.action === 'terminal.execute' || tool.action === 'testing.run')) {
+    queueAIToolApproval(tool, fingerprint, status.data.sessionId);
+    return result;
+  }
+
   setAIBridgeState(result.success ? 'RESULT_RETURNED' : 'AGENT_ERROR', { action:tool.action, requestId:tool.id || fingerprint });
   sendToRenderer('ai-tool-status', { status:result.success ? 'executed' : 'error', action:tool.action, result });
   const injection = await sendTextToAI(toolResultPrompt(tool, result));
@@ -552,13 +724,25 @@ function queueAIToolApproval(tool, fingerprint, workspaceSessionId) {
   }, AI_APPROVAL_TTL_MS);
   pendingAIToolRequests.set(approvalId, { tool, fingerprint, context, timer });
   const params = tool.params || {};
-  const resource = params.path || params.command || params.remote || tool.action;
+  const terminalPlan = splitTerminalSequence(tool);
+  const isTerminalAction = tool.action === 'terminal.execute' || tool.action === 'testing.run';
+  const resource = isTerminalAction
+    ? (terminalPlan ? `${terminalPlan.steps.length} local project steps` : 'Local project command')
+    : (params.path || params.remote || tool.action);
+  const safeDetails = {
+    source: 'ai-bridge',
+    action: tool.action,
+    approvalId,
+    ...(terminalPlan ? { stepCount: terminalPlan.steps.length } : {}),
+  };
   sendToRenderer('ai-approval-request', {
     approvalId,
     action:tool.action,
-    params,
+    params: safeDetails,
     resource,
-    description:'AI طلب تنفيذ عملية محلية حساسة: ' + tool.action
+    description: isTerminalAction
+      ? 'ULAB needs your approval to execute a local project operation.'
+      : 'ULAB needs your approval to apply a local workspace change.'
   });
   setAIBridgeState('APPROVAL_REQUIRED', { action:tool.action, approvalId });
   sendToRenderer('ai-tool-status', { status:'approval_required', action:tool.action, approvalId, expiresAt:context.expiresAt });
@@ -573,7 +757,38 @@ async function processAIToolRequest(tool) {
   setAIBridgeState('ACTION_DETECTED', { action:tool.action, requestId:tool.id || fingerprint });
   try { await aiView?.webContents.executeJavaScript(buildHideULABAssistantRequestScript(), false); } catch {}
 
-  const disposition = getAIToolDisposition(tool.action);
+  if (tool.action === 'task.progress') {
+    const message = String(tool.params?.message || tool.params?.stage || 'Working').trim().slice(0, 240);
+    const rawProgress = Number(tool.params?.progress);
+    sendToRenderer('ai-agent-task', {
+      state:'progress',
+      taskId:activeAITask?.id || null,
+      stage:String(tool.params?.stage || '').trim().slice(0, 80),
+      message,
+      progress:Number.isFinite(rawProgress) ? Math.max(0, Math.min(100, rawProgress)) : null,
+    });
+    setAIBridgeState('WORKING', { action:'task.progress', taskId:activeAITask?.id || null });
+    return;
+  }
+  if (tool.action === 'task.complete') {
+    const completedTaskId = activeAITask?.id || null;
+    const summary = String(tool.params?.summary || tool.params?.message || 'Task completed').trim().slice(0, 1000);
+    activeAITask = null;
+    bridgeRecoveryAttempts = 0;
+    lastBridgeRecoveryAssistantText = '';
+    recoveryCandidateSince = 0;
+    setAIViewVisible(false);
+    setAIBridgeState('AI_CONNECTED', { action:'bridge.task.complete', taskId:completedTaskId });
+    sendToRenderer('ai-agent-task', { state:'completed', taskId:completedTaskId, summary });
+    return;
+  }
+
+  // Terminal/test execution uses server-side command evaluation first. Safe
+  // commands run without a modal; only commands that the Agent marks as
+  // sensitive/approval-required reach the human approval gate.
+  const disposition = (tool.action === 'terminal.execute' || tool.action === 'testing.run')
+    ? 'auto'
+    : getAIToolDisposition(tool.action);
   if (disposition === 'reject') {
     const result = { success:false, error:{ code:'INVALID_REQUEST', message:'AI tool action is not permitted: ' + tool.action } };
     setAIBridgeState('AGENT_ERROR', { action:tool.action, error:result.error.message });
@@ -602,6 +817,11 @@ async function processAIToolRequest(tool) {
 async function pollAIForToolsImpl() {
   if (!aiView) return;
 
+  // Once ULAB asks the human to approve a sensitive operation, freeze the
+  // tool detector until that transaction is resolved. This prevents the
+  // provider from producing a second request against the same approval ID.
+  if (pendingAIToolRequests.size > 0) return;
+
   // Detect the human request independently from ULAB-generated control messages.
   // This lets the host intervene immediately instead of waiting for a prose reply.
   const latestUser = await readLatestUserText();
@@ -620,7 +840,9 @@ async function pollAIForToolsImpl() {
         userText: latestUser,
         startedAt: Date.now(),
       };
+      setAIViewVisible(false);
       setAIBridgeState('ACTION_DETECTED', { action:'bridge.task.kickoff', taskId:activeAITask.id });
+      sendToRenderer('ai-agent-task', { state:'started', taskId:activeAITask.id, prompt:latestUser.slice(0, 600) });
       const snapshot = await primeWorkspaceForAI();
       if (snapshot?.success) {
         const kickoff = await sendTextToAI(taskExecutionKickoffPrompt(latestUser, snapshot.data));
@@ -675,13 +897,19 @@ async function pollAIForToolsImpl() {
 
   const tool = extractToolBlock(assistant);
   if (!tool) {
-    const completion = /^(?:done|completed|finished|all set|task complete|تم(?:ت|ّت)?(?: المهمة| العملية)?(?: بنجاح)?|اكتمل(?:ت)?|انته(?:ت|ى)|تم التنفيذ)/i.test(assistant.trim());
+    const completion = /^(?:ULAB_TASK_COMPLETE\b|done\b|completed\b|finished\b|all set\b|task complete\b|i(?:'ve| have)\s+(?:created|updated|modified|finished|completed)|the\s+(?:file|changes|task)\s+(?:is|are)\s+(?:done|complete)|تم(?:ت|ّت)?(?: المهمة| العملية| إنشاء| تحديث| تعديل)?(?: بنجاح)?\b|اكتمل(?:ت)?|انته(?:ت|ى)|تم التنفيذ|تم إنشاء|تم تحديث|تم تعديل)/i.test(assistant.trim());
     if (completion && activeAITask) {
+      const completedTaskId = activeAITask.id;
       activeAITask = null;
       bridgeRecoveryAttempts = 0;
       lastBridgeRecoveryAssistantText = '';
       recoveryCandidateSince = 0;
-      setAIBridgeState('AI_CONNECTED', { action:'bridge.task.complete' });
+      // Keep the external AI worker hidden after completion so the native
+      // ULAB code/preview surface remains visible. The AI chat is reopened
+      // explicitly through the Bridge UI when the user needs it.
+      setAIViewVisible(false);
+      setAIBridgeState('AI_CONNECTED', { action:'bridge.task.complete', taskId:completedTaskId });
+      sendToRenderer('ai-agent-task', { state:'completed', taskId:completedTaskId });
       return;
     }
     if (
@@ -781,6 +1009,7 @@ async function openAISession(providerId, customUrl = '') {
   });
   aiProvider = providerId;
   mainWindow.contentView.addChildView(aiView);
+  setAIViewVisible(true);
   aiView.webContents.setWindowOpenHandler(({ url }) => {
     if (isTrustedAIUrl(providerId, targetUrl, url)) {
       void aiView.webContents.loadURL(url);
@@ -799,6 +1028,7 @@ async function openAISession(providerId, customUrl = '') {
   });
   aiView.webContents.on('did-finish-load', () => {
     sendToRenderer('ai-session-status', { provider:providerId, status:'ready', url:aiView.webContents.getURL() });
+    try { void aiView.webContents.executeJavaScript(buildInstallULABSanitizerScript(), false); } catch {}
     void initializeAIBridge();
   });
   aiView.webContents.on('did-navigate', () => {
@@ -879,6 +1109,7 @@ function closeAISession() {
   try { if (!aiView.webContents.isDestroyed()) aiView.webContents.destroy(); } catch { try { aiView.webContents.close(); } catch {} }
   aiView = null;
   aiProvider = null;
+  aiViewVisible = true;
 }
 
 function createWindow() {
@@ -970,7 +1201,7 @@ ipcMain.handle('mcp-config', async () => ({
 ipcMain.handle('mcp-diagnostics', async () => {
   const discover = await callMCP('server/discover', 'server/discover', {
     _meta:{
-      'io.modelcontextprotocol/clientInfo':{name:'ULAB Desktop',version:'3.10.8'},
+      'io.modelcontextprotocol/clientInfo':{name:'ULAB Desktop',version:'3.10.10'},
       'io.modelcontextprotocol/clientCapabilities':{},
     },
   });
@@ -1176,6 +1407,7 @@ ipcMain.handle('ai-send-context', async (_event, payload) => {
   const task = typeof payload === 'object' && payload?.query
     ? String(payload.query).trim().slice(0, 16000)
     : '';
+  const preparedContext = typeof payload === 'object' ? String(payload?.context || '').trim() : '';
   if (task && isLocalProjectWorkRequest(task)) {
     activeAITask = {
       id: 'task-' + Date.now() + '-' + Math.random().toString(36).slice(2,8),
@@ -1186,39 +1418,48 @@ ipcMain.handle('ai-send-context', async (_event, payload) => {
     bridgeRecoveryAttempts = 0;
     lastBridgeRecoveryAssistantText = '';
     recoveryCandidateSince = 0;
+    setAIViewVisible(false);
+    sendToRenderer('ai-agent-task', { state:'started', taskId:activeAITask.id, prompt:task.slice(0, 600) });
   } else {
     activeAITask = null;
   }
 
-  const context = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
-  const protocol = `You are connected to ULAB Desktop. Work with the selected local workspace through ULAB tools only. When you need a local operation, emit exactly one fenced block using this format:
-\`\`\`ulab-tool
-{"action":"files.read","params":{"path":"relative/path"}}
-\`\`\`
-Supported actions include files.read, files.list, files.search, files.propose, files.create, files.write, files.delete, git.status, git.diff, git.commit, git.push, terminal.execute, testing.run, context.build, audit.log. Never claim an action was executed until ULAB returns a real tool result. For files.create, files.write, files.delete, git.commit, git.push, terminal.execute, and testing.run, ULAB will require explicit human approval. An AI response or an approved:true field from the AI is never user authorization. Do not ask the human to copy/paste files or command output.
-
-ULAB WORKSPACE CONTEXT:
-${context}`;
-  const result = await sendWhenAIReady(protocol);
-  if (result?.ok) {
-    setAIBridgeState('AI_CONTINUES', { action:'context.send', taskId:activeAITask?.id || null });
-  } else {
-    let errorMessage = result?.error || result?.reason || 'AI input could not be located. Sign in to the AI service and retry.';
-    if (result?.reason === 'AI_AUTH_REQUIRED') {
-      setAIBridgeState('AI_AUTH_REQUIRED', { action:'context.send', error:errorMessage });
+  if (task && isLocalProjectWorkRequest(task)) {
+    const snapshot = await primeWorkspaceForAI();
+    if (!snapshot?.success) {
+      setAIViewVisible(true);
+      activeAITask = null;
+      const errorMessage = snapshot?.error?.message || 'No active workspace is available.';
+      setAIBridgeState('AGENT_ERROR', { action:'context.send', error:errorMessage });
+      sendToRenderer('ai-agent-task', { state:'error', error:errorMessage });
+      return { ok:false, reason:'WORKSPACE_NOT_READY', error:errorMessage };
     }
-    if (result?.reason === 'AI_INPUT_NOT_FOUND') {
-      const diagnostics = await diagnoseAIPage();
-      if (diagnostics?.ok) {
-        errorMessage += ' Page diagnostics: ' + (diagnostics.inputs?.length || 0) + ' input, ' + (diagnostics.sendButtons?.length || 0) + ' send, ' + (diagnostics.assistantNodes?.length || 0) + ' assistant matches.';
+
+    const prompt = taskExecutionKickoffPrompt(task, snapshot.data, preparedContext);
+    const result = await sendWhenAIReady(prompt);
+    if (result?.ok) {
+      setAIBridgeState('AI_CONTINUES', { action:'context.send', taskId:activeAITask.id });
+    } else {
+      const errorMessage = result?.error || result?.reason || 'AI input could not be located.';
+      setAIViewVisible(true);
+      if (result?.reason === 'AI_AUTH_REQUIRED') {
+        setAIBridgeState('AI_AUTH_REQUIRED', { action:'context.send', error:errorMessage, taskId:activeAITask.id });
+      } else {
+        setAIBridgeState('AGENT_ERROR', { action:'context.send', error:errorMessage, taskId:activeAITask.id });
       }
     }
-    if (result?.reason !== 'AI_AUTH_REQUIRED') {
-      setAIBridgeState('AGENT_ERROR', {
-        action:'context.send',
-        error: errorMessage
-      });
-    }
+    return result;
+  }
+
+  const context = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+  const result = await sendWhenAIReady(context);
+  if (result?.ok) {
+    setAIBridgeState('AI_CONTINUES', { action:'context.send' });
+  } else {
+    setAIBridgeState(result?.reason === 'AI_AUTH_REQUIRED' ? 'AI_AUTH_REQUIRED' : 'AGENT_ERROR', {
+      action:'context.send',
+      error:result?.error || result?.reason
+    });
   }
   return result;
 });

@@ -14,7 +14,7 @@ function now(language: string) { return new Date().toLocaleTimeString(language =
 export default function TerminalPanel({ permissionMode, connected, onExecuteCommand }: TerminalPanelProps) {
   const { language } = useLanguage();
   const ui = (ar: string, en: string) => language === 'en' ? en : ar;
-  const [entries, setEntries] = useState<TerminalEntry[]>([{ type: 'info', content: 'ULAB Terminal — Local Agent sandbox · v3.10.8', timestamp: now(language) }]);
+  const [entries, setEntries] = useState<TerminalEntry[]>([{ type: 'info', content: 'ULAB Terminal — Local Agent sandbox · v3.10.10', timestamp: now(language) }]);
   const [input, setInput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);

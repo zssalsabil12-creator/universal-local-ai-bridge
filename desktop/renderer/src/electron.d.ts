@@ -64,6 +64,8 @@ declare global {
       onAIBridgeState: (callback: (data: unknown) => void) => () => void;
       onAIStatus: (callback: (data: unknown) => void) => () => void;
       onAIToolStatus: (callback: (data: unknown) => void) => () => void;
+      onAIAgentTask: (callback: (data: unknown) => void) => () => void;
+      onAISessionVisibility: (callback: (data: unknown) => void) => () => void;
     };
   }
 }
