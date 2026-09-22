@@ -259,7 +259,7 @@ export class WorkspaceManager {
   /**
    * Applies an approved change proposal or directly writes if approved
    */
-  public async applyChange(targetPath: string, content: string, changeId?: string): Promise<boolean> {
+  public async applyChange(targetPath: string, content: string, changeId?: string, createOnly = false): Promise<boolean> {
     const check = this.guard.validate(targetPath, { forWrite: true });
     if (!check.allowed || !check.resolvedRealPath) {
       const err = new Error(check.error?.message || 'Access denied');
@@ -282,6 +282,11 @@ export class WorkspaceManager {
     }
 
     const targetFile = check.resolvedRealPath;
+    if (createOnly && fs.existsSync(targetFile)) {
+      const err = new Error('Cannot create file because the target already exists');
+      (err as any).code = 'FILE_EXISTS';
+      throw err;
+    }
     const parentDir = path.dirname(targetFile);
 
     if (!fs.existsSync(parentDir)) {

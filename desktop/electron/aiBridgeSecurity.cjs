@@ -4,7 +4,7 @@ const SAFE_AI_ACTIONS = new Set([
 ]);
 
 const HUMAN_APPROVAL_ACTIONS = new Set([
-  'files.approve', 'files.reject', 'files.write', 'files.delete',
+  'files.create', 'files.write', 'files.delete',
   'git.commit', 'git.push', 'terminal.execute', 'testing.run'
 ]);
 
@@ -37,20 +37,67 @@ function getAIToolDisposition(action) {
   return 'reject';
 }
 
-function extractAIToolRequest(text) {
-  const matches = [...String(text || '').matchAll(/```ulab-tool\s*([\s\S]*?)```/g)];
-  if (matches.length !== 1) return null;
-  const raw = matches[0][1].trim();
-  if (!raw || raw.length > MAX_TOOL_BLOCK_LENGTH) return null;
+function parseToolCandidate(raw) {
+  const source = String(raw || '').trim();
+  if (!source || source.length > MAX_TOOL_BLOCK_LENGTH) return null;
   try {
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(source);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
     if (typeof parsed.action !== 'string' || parsed.action.length === 0 || parsed.action.length > 128) return null;
     if (parsed.id !== undefined && (typeof parsed.id !== 'string' || parsed.id.length > 128)) return null;
     if (parsed.params !== undefined && (!parsed.params || typeof parsed.params !== 'object' || Array.isArray(parsed.params))) return null;
-    return { id: parsed.id, action: parsed.action, params: parsed.params || {} };  } catch {
+    return { id: parsed.id, action: parsed.action, params: parsed.params || {} };
+  } catch {
     return null;
   }
+}
+
+function extractEmbeddedJSONObjects(text) {
+  const source = String(text || '');
+  const candidates = [];
+  for (let start = 0; start < source.length; start++) {
+    if (source[start] !== '{') continue;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let i = start; i < source.length; i++) {
+      const ch = source[i];
+      if (inString) {
+        if (escaped) { escaped = false; continue; }
+        if (ch === '\\') { escaped = true; continue; }
+        if (ch === '"') inString = false;
+        continue;
+      }
+      if (ch === '"') { inString = true; continue; }
+      if (ch === '{') depth++;
+      else if (ch === '}') {
+        depth--;
+        if (depth === 0) {
+          candidates.push(source.slice(start, i + 1));
+          break;
+        }
+      }
+      if (i - start >= MAX_TOOL_BLOCK_LENGTH) break;
+    }
+  }
+  return candidates;
+}
+
+function extractAIToolRequest(text) {
+  const source = String(text || '').trim();
+  if (!source || source.length > MAX_TOOL_BLOCK_LENGTH) return null;
+
+  const fenced = [...source.matchAll(/```ulab-tool\s*([\s\S]*?)```/gi)];
+  if (fenced.length === 1) return parseToolCandidate(fenced[0][1]);
+  if (fenced.length > 1) {
+    const parsed = fenced.map(match => parseToolCandidate(match[1])).filter(Boolean);
+    return parsed.length === 1 ? parsed[0] : null;
+  }
+
+  const direct = parseToolCandidate(source);
+  if (direct) return direct;
+
+  return extractEmbeddedJSONObjects(source).map(parseToolCandidate).find(Boolean) || null;
 }
 
 const TRUSTED_HOSTS = {

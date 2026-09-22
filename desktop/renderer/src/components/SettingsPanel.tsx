@@ -32,6 +32,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export default function SettingsPanel({ settings, onSettingsChange }: SettingsPanelProps) {
   const { language, setLanguage, t } = useLanguage();
+  const ui = (ar: string, en: string) => language === 'en' ? en : ar;
   const [localSettings, setLocalSettings] = useState(settings);
 
   useEffect(() => {
@@ -61,11 +62,11 @@ export default function SettingsPanel({ settings, onSettingsChange }: SettingsPa
       <div className="mb-6">
         <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
           <Globe className="w-4 h-4 text-cyan-400" />
-          عام
+          {ui('عام', 'General')}
         </h4>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-[#94a3b8]">اللغة</span>
+            <span className="text-xs text-[#94a3b8]">{ui('اللغة', 'Language')}</span>
             <select
               value={localSettings.language}
               onChange={e => setLocalSettings({ ...localSettings, language: e.target.value as Language })}
@@ -77,7 +78,7 @@ export default function SettingsPanel({ settings, onSettingsChange }: SettingsPa
             </select>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-xs text-[#94a3b8]">حفظ تلقائي</span>
+            <span className="text-xs text-[#94a3b8]">{ui('حفظ تلقائي', 'Auto-save')}</span>
             <button
               onClick={() => setLocalSettings({ ...localSettings, autoSave: !localSettings.autoSave })}
               className={`w-10 h-5 rounded-full transition-colors ${
@@ -96,12 +97,12 @@ export default function SettingsPanel({ settings, onSettingsChange }: SettingsPa
       <div className="mb-6">
         <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
           <Cpu className="w-4 h-4 text-purple-400" />
-          محرك السياق
+          {ui('محرك السياق', 'Context engine')}
         </h4>
         <div className="space-y-3">
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-[#94a3b8]">أقصى عدد ملفات</span>
+              <span className="text-xs text-[#94a3b8]">{ui('أقصى عدد ملفات', 'Max files')}</span>
               <span className="text-xs text-indigo-400">{localSettings.maxContextFiles}</span>
             </div>
             <input
@@ -115,7 +116,7 @@ export default function SettingsPanel({ settings, onSettingsChange }: SettingsPa
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-[#94a3b8]">أقصى عدد أسطر</span>
+              <span className="text-xs text-[#94a3b8]">{ui('أقصى عدد أسطر', 'Max lines')}</span>
               <span className="text-xs text-indigo-400">{localSettings.maxContextLines}</span>
             </div>
             <input
@@ -135,11 +136,11 @@ export default function SettingsPanel({ settings, onSettingsChange }: SettingsPa
       <div className="mb-6">
         <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
           <Shield className="w-4 h-4 text-green-400" />
-          المميزات
+          {ui('المميزات', 'Features')}
         </h4>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-[#94a3b8]">تفعيل Git</span>
+            <span className="text-xs text-[#94a3b8]">{ui('تفعيل Git', 'Enable Git')}</span>
             <button
               onClick={() => setLocalSettings({ ...localSettings, enableGit: !localSettings.enableGit })}
               className={`w-10 h-5 rounded-full transition-colors ${
@@ -152,7 +153,7 @@ export default function SettingsPanel({ settings, onSettingsChange }: SettingsPa
             </button>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-xs text-[#94a3b8]">تفعيل Terminal</span>
+            <span className="text-xs text-[#94a3b8]">{ui('تفعيل Terminal', 'Enable Terminal')}</span>
             <button
               onClick={() => setLocalSettings({ ...localSettings, enableTerminal: !localSettings.enableTerminal })}
               className={`w-10 h-5 rounded-full transition-colors ${
@@ -176,19 +177,19 @@ export default function SettingsPanel({ settings, onSettingsChange }: SettingsPa
           {saved ? (
             <>
               <CheckCircle className="w-4 h-4" />
-              تم الحفظ
+              {ui('تم الحفظ', 'Saved')}
             </>
           ) : (
             <>
               <Save className="w-4 h-4" />
-              حفظ الإعدادات
+              {ui('حفظ الإعدادات', 'Save settings')}
             </>
           )}
         </button>
         <button
           onClick={handleReset}
           className="px-4 py-2 rounded-lg bg-[#252530] text-[#94a3b8] text-xs hover:bg-[#2a2a3a] transition-colors"
-          title="إعادة تعيين"
+          title={ui('إعادة تعيين', 'Reset')}
         >
           <RotateCcw className="w-4 h-4" />
         </button>

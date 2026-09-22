@@ -5,7 +5,7 @@ const {
 } = require('./aiBridgeSecurity.cjs');
 
 const safe = ['files.read','files.list','files.search','files.propose','git.status','git.diff','context.build','audit.log','workspace.session'];
-const approval = ['files.approve','files.reject','files.write','files.delete','git.commit','git.push','terminal.execute','testing.run'];
+const approval = ['files.create','files.write','files.delete','git.commit','git.push','terminal.execute','testing.run'];
 
 for (const action of safe) assert.equal(getAIToolDisposition(action), 'auto');
 for (const action of approval) assert.equal(getAIToolDisposition(action), 'approval');
@@ -13,6 +13,15 @@ assert.equal(getAIToolDisposition('unknown.action'), 'reject');
 
 const parsed = extractAIToolRequest('hello\n```ulab-tool\n{"id":"x1","action":"files.read","params":{"path":"src/app.ts"}}\n```');
 assert.deepEqual(parsed, { id:'x1', action:'files.read', params:{path:'src/app.ts'} });
+assert.deepEqual(extractAIToolRequest('{"action":"files.list","params":{"path":"."}}'), {
+  id:undefined, action:'files.list', params:{path:'.'}
+});
+assert.deepEqual(extractAIToolRequest('I will inspect the workspace: {"action":"files.list","params":{"path":"."}}'), {
+  id:undefined, action:'files.list', params:{path:'.'}
+});
+assert.deepEqual(extractAIToolRequest('```json\n{"action":"files.read","params":{"path":"src/app.ts"}}\n```'), {
+  id:undefined, action:'files.read', params:{path:'src/app.ts'}
+});
 assert.equal(extractAIToolRequest('```ulab-tool\n{"action":"files.read"}\n```\n```ulab-tool\n{"action":"files.list"}\n```'), null);
 assert.equal(extractAIToolRequest('```ulab-tool\n[]\n```'), null);
 assert.equal(extractAIToolRequest('```ulab-tool\n{"action":"files.read","params":[]}\n```'), null);

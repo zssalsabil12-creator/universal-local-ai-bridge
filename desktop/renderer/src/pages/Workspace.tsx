@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FolderTree, Search, FileCode, Settings as SettingsIcon, ChevronDown, ChevronLeft,
+  FolderTree, Search, FileCode, Code2, Settings as SettingsIcon, ChevronDown, ChevronLeft,
   X, Folder, File, Eye, Shield, Terminal, GitBranch, MessageSquare,
   Copy, Check, ArrowLeft, Network, Brain, Database, Layers, Clock, Keyboard,
   AlertTriangle, CheckCircle, Play, Square, Send, RotateCcw,
@@ -19,6 +19,8 @@ import {
 } from '../utils/contextEngine';
 import ProjectMap from '../components/ProjectMap';
 import CurrentAIBridgePanel from '../components/CurrentAIBridgePanel';
+import ProjectPreview from '../components/ProjectPreview';
+import DeveloperWorkbench from '../components/DeveloperWorkbench';
 import LocalMemoryPanel from '../components/LocalMemoryPanel';
 import PermissionCenter, { DEFAULT_CONFIG as DEFAULT_PERMISSION_CONFIG, resolvePermission } from '../components/PermissionCenter';
 import type { PermissionConfig } from '../components/PermissionCenter';
@@ -153,12 +155,14 @@ function ContextPanel({
 }: {
   context: ContextResult | null;
 }) {
+  const { language } = useLanguage();
+  const ui = (ar: string, en: string) => language === 'en' ? en : ar;
   if (!context) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-6">
         <Brain className="w-12 h-12 text-[#2a2a3a] mb-4" />
-        <p className="text-sm text-[#94a3b8]">اكتب استعلامًا لاستخراج السياق</p>
-        <p className="text-xs text-[#64748b] mt-2">سيقوم المحرك بتحليل مشروعك وإيجاد الملفات الأكثر صلة</p>
+        <p className="text-sm text-[#94a3b8]">{ui('اكتب استعلامًا لاستخراج السياق', 'Enter a query to extract project context')}</p>
+        <p className="text-xs text-[#64748b] mt-2">{ui('سيقوم المحرك بتحليل مشروعك وإيجاد الملفات الأكثر صلة', 'The engine will analyze your project and find the most relevant files')}</p>
       </div>
     );
   }
@@ -167,17 +171,17 @@ function ContextPanel({
     <div className="p-4 space-y-4 overflow-y-auto h-full">
       <div className="flex items-center gap-2">
         <Layers className="w-4 h-4 text-cyan-400" />
-        <h3 className="text-sm font-bold">سياق المهمة</h3>
+        <h3 className="text-sm font-bold">{ui('سياق المهمة', 'Task context')}</h3>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
         <div className="p-2 rounded bg-[#0a0a0f] text-center">
           <p className="text-lg font-bold text-indigo-400">{context.files.length}</p>
-          <p className="text-[10px] text-[#94a3b8]">ملفات</p>
+          <p className="text-[10px] text-[#94a3b8]">{ui('ملفات', 'files')}</p>
         </div>
         <div className="p-2 rounded bg-[#0a0a0f] text-center">
           <p className="text-lg font-bold text-cyan-400">~{context.totalLines}</p>
-          <p className="text-[10px] text-[#94a3b8]">سطر</p>
+          <p className="text-[10px] text-[#94a3b8]">{ui('سطر', 'lines')}</p>
         </div>
         <div className="p-2 rounded bg-[#0a0a0f] text-center">
           <p className="text-lg font-bold text-purple-400">~{context.estimatedTokens}</p>
@@ -186,7 +190,7 @@ function ContextPanel({
       </div>
 
       <div>
-        <p className="text-xs text-[#94a3b8] mb-2">الكلمات المفتاحية:</p>
+        <p className="text-xs text-[#94a3b8] mb-2">{ui('الكلمات المفتاحية:', 'Keywords:')}</p>
         <div className="flex flex-wrap gap-1">
           {context.keywords.slice(0, 12).map(kw => (
             <span key={kw} className="px-1.5 py-0.5 rounded text-[10px] bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
@@ -197,7 +201,7 @@ function ContextPanel({
       </div>
 
       <div>
-        <p className="text-xs text-[#94a3b8] mb-2">الملفات المختارة:</p>
+        <p className="text-xs text-[#94a3b8] mb-2">{ui('الملفات المختارة:', 'Selected files:')}</p>
         <div className="space-y-1.5">
           {context.files.map((file, i) => (
             <div key={i} className="p-2 rounded bg-[#0a0a0f] border border-[#2a2a3a]">
@@ -226,8 +230,10 @@ function ChatPanel({
 }: {
   onExtractContext: (query: string) => void; isLoading: boolean;
 }) {
+  const { language } = useLanguage();
+  const ui = (ar: string, en: string) => language === 'en' ? en : ar;
   const [messages, setMessages] = useState<{ role: 'user' | 'system'; content: string }[]>([
-    { role: 'system', content: 'مرحبًا! اكتب سؤالك عن المشروع وسأستخرج السياق المناسب من ملفاتك المحلية.' }
+    { role: 'system', content: ui('مرحبًا! اكتب سؤالك عن المشروع وسأستخرج السياق المناسب من ملفاتك المحلية.', 'Welcome. Ask a question about the project and I will extract the relevant context from your local files.') }
   ]);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -244,16 +250,16 @@ function ChatPanel({
   };
 
   const suggestions = [
-    'أين يتم التحقق من المصادقة؟',
+    ui('أين يتم التحقق من المصادقة؟', 'Where is authentication validated?'),
     'Find authentication logic',
     'Show API routes',
-    'اشرح بنية المشروع',
+    ui('اشرح بنية المشروع', 'Explain the project structure'),
     'Find database models',
     'Show component hierarchy',
-    'ما هي الملفات المرتبطة بـ login؟',
+    ui('ما هي الملفات المرتبطة بـ login؟', 'Which files are related to login?'),
     'Find all React components',
     'Show me the database schema',
-    'أين يتم التعامل مع الأخطاء؟',
+    ui('أين يتم التعامل مع الأخطاء؟', 'Where are errors handled?'),
   ];
 
   return (
@@ -280,7 +286,7 @@ function ChatPanel({
             <div className="bg-[#252530] border border-[#2a2a3a] rounded-lg p-2.5 text-xs text-[#94a3b8]">
               <span className="flex items-center gap-2">
                 <RefreshCw className="w-3 h-3 animate-spin" />
-                جاري تحليل المشروع...
+                {ui('جاري تحليل المشروع...', 'Analyzing project...')}
               </span>
             </div>
           </div>
@@ -291,7 +297,7 @@ function ChatPanel({
       {/* Suggestions */}
       {messages.length <= 1 && (
         <div className="px-3 pb-2">
-          <p className="text-[10px] text-[#64748b] mb-1.5">اقتراحات:</p>
+          <p className="text-[10px] text-[#64748b] mb-1.5">{ui('اقتراحات:', 'Suggestions:')}</p>
           <div className="flex flex-wrap gap-1">
             {suggestions.map((s, i) => (
               <button key={i} onClick={() => { setInput(s); }} className="px-2 py-1 rounded text-[10px] bg-[#252530] hover:bg-[#2a2a3a] text-[#94a3b8] transition-colors">
@@ -308,7 +314,7 @@ function ChatPanel({
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSend()}
-            placeholder="اكتب سؤالك عن المشروع..."
+            placeholder={ui('اكتب سؤالك عن المشروع...', 'Ask a question about the project...')}
             className="flex-1 px-3 py-2 rounded-lg bg-[#0a0a0f] border border-[#2a2a3a] text-xs text-white placeholder:text-[#64748b] focus:border-indigo-500/50 focus:outline-none"
             dir="auto"
           />
@@ -334,10 +340,12 @@ function PermissionModal({
 }) {
   if (!isOpen) return null;
 
+  const { language } = useLanguage();
+  const ui = (ar: string, en: string) => language === 'en' ? en : ar;
   const modes = [
-    { id: 'readonly', name: 'قراءة فقط', icon: <Eye className="w-5 h-5" />, selected: 'border-emerald-400/45 bg-emerald-400/10', iconClass: 'text-emerald-400', desc: 'AI يقرأ ويحلل فقط' },
-    { id: 'assisted', name: 'كتابة بمساعدة', icon: <FileCode className="w-5 h-5" />, selected: 'border-amber-400/45 bg-amber-400/10', iconClass: 'text-amber-400', desc: 'AI يقترح التعديل وأنت توافق قبل التطبيق' },
-    { id: 'agent', name: 'وضع الوكيل', icon: <Cpu className="w-5 h-5" />, selected: 'border-violet-400/45 bg-violet-400/10', iconClass: 'text-violet-400', desc: 'AI ينفذ العمليات بعد موافقتك الصريحة' },
+    { id: 'readonly', name: ui('قراءة فقط', 'Read-only'), icon: <Eye className="w-5 h-5" />, selected: 'border-emerald-400/45 bg-emerald-400/10', iconClass: 'text-emerald-400', desc: ui('AI يقرأ ويحلل فقط', 'AI can only read and analyze') },
+    { id: 'assisted', name: ui('كتابة بمساعدة', 'Assisted changes'), icon: <FileCode className="w-5 h-5" />, selected: 'border-amber-400/45 bg-amber-400/10', iconClass: 'text-amber-400', desc: ui('AI يقترح التعديل وأنت توافق قبل التطبيق', 'AI proposes changes and you approve them before applying') },
+    { id: 'agent', name: ui('وضع الوكيل', 'Agent mode'), icon: <Cpu className="w-5 h-5" />, selected: 'border-violet-400/45 bg-violet-400/10', iconClass: 'text-violet-400', desc: ui('AI ينفذ العمليات بعد موافقتك الصريحة', 'AI executes operations after your explicit approval') },
   ];
 
   return (
@@ -345,7 +353,7 @@ function PermissionModal({
       <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-[#111118] border border-[#2a2a3a] rounded-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-2 mb-6">
           <Shield className="w-5 h-5 text-indigo-400" />
-          <h3 className="text-lg font-bold">نظام الصلاحيات</h3>
+          <h3 className="text-lg font-bold">{ui('نظام الصلاحيات', 'Permission mode')}</h3>
           <button onClick={onClose} className="mr-auto text-[#94a3b8] hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <div className="space-y-3">
@@ -373,7 +381,7 @@ function PermissionModal({
         <div className="mt-6 p-3 rounded-lg bg-[#0a0a0f] border border-[#2a2a3a]">
           <div className="flex items-center gap-2 text-xs text-[#94a3b8]">
             <Lock className="w-3 h-3 text-green-400" />
-            <span>جميع العمليات تُسجل محليًا ولا تُرسل لأي خادم</span>
+            <span>{ui('جميع العمليات تُسجل محليًا ولا تُرسل لأي خادم', 'All operations are logged locally and are not sent to a server')}</span>
           </div>
         </div>
       </motion.div>
@@ -388,6 +396,8 @@ function SearchPanel({
   index: ProjectIndex | null; onFileSelect: (path: string) => void;
   fileContents: Record<string, string>;
 }) {
+  const { language } = useLanguage();
+  const ui = (ar: string, en: string) => language === 'en' ? en : ar;
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<{ file: string; line: number; text: string }[]>([]);
 
@@ -400,7 +410,7 @@ function SearchPanel({
     // Search in filenames first
     for (const file of index.flatFiles) {
       if (file.path.toLowerCase().includes(q)) {
-        allResults.push({ file: file.path, line: 0, text: file.name + ' (اسم الملف)' });
+        allResults.push({ file: file.path, line: 0, text: file.name + ' (' + ui('اسم الملف','filename') + ')' });
       }
     }
 
@@ -422,14 +432,14 @@ function SearchPanel({
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="ابحث في المشروع..."
+          placeholder={ui('ابحث في المشروع...', 'Search the project...')}
           className="w-full pr-9 pl-3 py-2 rounded-lg bg-[#0a0a0f] border border-[#2a2a3a] text-xs text-white placeholder:text-[#64748b] focus:border-indigo-500/50 focus:outline-none"
           dir="auto"
         />
       </div>
       <div className="flex-1 overflow-y-auto space-y-1">
         {results.length === 0 && query && (
-          <p className="text-xs text-[#64748b] text-center py-4">لا توجد نتائج</p>
+          <p className="text-xs text-[#64748b] text-center py-4">{ui('لا توجد نتائج', 'No results')}</p>
         )}
         {results.map((r, i) => (
           <button
@@ -441,7 +451,7 @@ function SearchPanel({
             {r.line > 0 && (
               <>
                 <p className="text-xs text-[#e2e8f0] truncate mt-0.5" dir="ltr">{r.text}</p>
-                <p className="text-[10px] text-[#64748b]">سطر {r.line}</p>
+                <p className="text-[10px] text-[#64748b]">{ui('سطر', 'Line')} {r.line}</p>
               </>
             )}
           </button>
@@ -449,7 +459,7 @@ function SearchPanel({
         {!query && (
           <div className="text-center py-8">
             <Search className="w-8 h-8 text-[#2a2a3a] mx-auto mb-2" />
-            <p className="text-xs text-[#64748b]">اكتب للبحث في الملفات والمحتوى</p>
+            <p className="text-xs text-[#64748b]">{ui('اكتب للبحث في الملفات والمحتوى', 'Type to search files and content')}</p>
           </div>
         )}
       </div>
@@ -528,7 +538,8 @@ function getPermissionKeyForAIAction(action: string): keyof PermissionConfig['gl
 
 // ============ MAIN WORKSPACE ============
 export default function Workspace({ onBack }: { onBack: () => void }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const ui = (ar: string, en: string) => language === 'en' ? en : ar;
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [projectIndex, setProjectIndex] = useState<ProjectIndex | null>(null);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -538,7 +549,11 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
   const [isContextLoading, setIsContextLoading] = useState(false);
   const [isIndexing, setIsIndexing] = useState(false);
   const [activeSidebarPanel, setActiveSidebarPanel] = useState<'files' | 'search' | 'map'>('files');
-  const [activeRightPanel, setActiveRightPanel] = useState<'bridge' | 'context' | 'contextBuilder' | 'memory' | 'permissions' | 'tasks' | 'log' | 'git' | 'terminal' | 'settings'>('bridge');
+  const [activeRightPanel, setActiveRightPanel] = useState<'bridge' | 'context' | 'contextBuilder' | 'memory' | 'permissions' | 'tasks' | 'log' | 'git' | 'terminal' | 'settings' | 'preview' | 'developer'>('developer');
+  const [aiBridgeActivity, setAIBridgeActivity] = useState<{ state: string; action: string }>({ state: 'IDLE', action: '' });
+  const [aiActivityLog, setAIActivityLog] = useState<Array<{ timestamp: number; status: string; action: string; path?: string }>>([]);
+  const [workspaceRevision, setWorkspaceRevision] = useState(0);
+  const [previewRefreshing, setPreviewRefreshing] = useState(false);
   const [lastQuery, setLastQuery] = useState('');
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [allMemory, setAllMemory] = useState<Record<string, ProjectMemory>>(loadMemory());
@@ -550,12 +565,14 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
   const [excludedContextPaths, setExcludedContextPaths] = useState<string[]>([]);
   const notifications = useNotifications();
   const agentConnection = useAgentConnection();
-  const [permissionMode, setPermissionMode] = useState('readonly');
+  // Assisted is the safe default for an AI workspace: reads are automatic,
+  // mutations and command execution still require explicit human approval.
+  const [permissionMode, setPermissionMode] = useState('assisted');
   const [showPermissions, setShowPermissions] = useState(false);
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [showAgentStatusModal, setShowAgentStatusModal] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(280);
-  const [rightPanelWidth, setRightPanelWidth] = useState(320);
+  const [rightPanelWidth, setRightPanelWidth] = useState(460);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [operationLog, setOperationLog] = useState<{ time: string; action: string; detail: string }[]>([]);
   const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>([]);
@@ -576,7 +593,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
         untracked:[],
         clean:false,
         isRepository:false,
-        error:'صلاحية Git مرفوضة من إعدادات مساحة العمل.',
+        error:ui('صلاحية Git مرفوضة من إعدادات مساحة العمل.','Git permission denied by workspace settings.'),
       });
       return;
     }
@@ -593,7 +610,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
           untracked:[],
           clean:false,
           isRepository:false,
-          error:result.error?.message || 'تعذر قراءة حالة Git',
+          error:result.error?.message || ui('تعذر قراءة حالة Git','Unable to read Git status'),
         });
       }
     } finally {
@@ -641,12 +658,30 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
         id: String(data?.approvalId || `approval-${Date.now()}`),
         type,
         resource,
-        description: String(data?.description || ('AI طلب تنفيذ العملية: ' + action)),
+        description: String(data?.description || ('AI requested operation: ' + action)),
         details: { source: 'ai-bridge', action, params: data?.params || {}, approvalId: data?.approvalId },
         timestamp: Date.now(),
       });
     });
-    return () => { off?.(); };
+    const offMcp = localAgent.onMcpApprovalRequest((data: any) => {
+      const action = String(data?.action || '');
+      const type: ApprovalAction['type'] =
+        action === 'files.delete' ? 'file_delete' :
+        action === 'terminal.execute' || action === 'testing.run' ? 'terminal_run' :
+        action.startsWith('git.') ? 'git_operation' :
+        'file_write';
+      const resource = String(data?.resource || data?.params?.path || data?.params?.command || action);
+      setActiveRightPanel('bridge');
+      setPendingApproval({
+        id: String(data?.approvalId || `approval-${Date.now()}`),
+        type,
+        resource,
+        description: String(data?.description || ('MCP requested operation: ' + action)),
+        details: { source: 'mcp', action, params: data?.params || {}, approvalId: data?.approvalId },
+        timestamp: Date.now(),
+      });
+    });
+    return () => { off?.(); offMcp?.(); };
   }, []);
 
   // Central File Modification Applier. Connected Local Agent writes always use
@@ -655,34 +690,35 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
     try {
       const writePermission = resolvePermission(permissionConfig, 'writeFiles', path);
       if (writePermission === 'deny') {
-        notifications.warning('التعديل محظور', 'إعدادات الصلاحيات تمنع تعديل هذا الملف داخل مساحة العمل.');
-        addLog('رفض تعديل ملف', path);
+        notifications.warning(ui('التعديل محظور', 'Change blocked'), ui('إعدادات الصلاحيات تمنع تعديل هذا الملف داخل مساحة العمل.', 'Workspace permissions prevent changing this file.'));
+        addLog(ui('رفض تعديل ملف','File change blocked'), path);
         return false;
       }
       if (permissionMode === 'readonly') {
-        notifications.warning('العملية محظورة', 'وضع القراءة فقط يمنع تعديل الملفات. غيّر وضع الصلاحيات أولاً.');
+        notifications.warning(ui('العملية محظورة', 'Operation blocked'), ui('وضع القراءة فقط يمنع تعديل الملفات. غيّر وضع الصلاحيات أولاً.', 'Read-only mode prevents file changes. Change the permission mode first.'));
         return false;
       }
       if (agentConnection.status === 'connected' && localAgent.getSession()) {
         const proposal = await localAgent.proposeChange(path, content, 'Approved by ULAB Agent Mode');
         if (!proposal.success || !proposal.data?.changeId) {
-          notifications.error('رفض التعديل', proposal.error?.message || 'تعذر إنشاء اقتراح آمن');
+          notifications.error(ui('رفض التعديل', 'Change rejected'), proposal.error?.message || ui('تعذر إنشاء اقتراح آمن', 'Unable to create a safe change proposal'));
           return false;
         }
         const approval = await localAgent.approveChange(proposal.data.changeId);
         if (!approval.success) {
-          notifications.error('رفض التعديل', approval.error?.message || 'تعذر اعتماد التعديل');
+          notifications.error(ui('رفض التعديل', 'Change rejected'), approval.error?.message || ui('Unable to approve the change', 'Unable to approve the change'));
           return false;
         }
         const applied = await localAgent.writeFile(path, content, true);
         if (!applied.success) {
-          notifications.error('فشل التطبيق', applied.error?.message || 'تم اعتماد الاقتراح لكن تعذر تطبيقه');
+          notifications.error(ui('فشل التطبيق', 'Apply failed'), applied.error?.message || ui('تم اعتماد الاقتراح لكن تعذر تطبيقه', 'The proposal was approved but could not be applied'));
           return false;
         }
         setFileContents(prev => ({ ...prev, [path]: content }));
         if (selectedFile === path) setFileContent(content);
-        addLog('Agent حفظ ملف', path);
-        notifications.success('تم الحفظ', `تم اعتماد التعديل وحفظه: ${path}`);
+        setWorkspaceRevision(v => v + 1);
+        addLog(ui('Agent حفظ ملف','Agent saved file'), path);
+        notifications.success(ui('تم الحفظ', 'Saved'), ui(`تم اعتماد التعديل وحفظه: ${path}`, `Change approved and saved: ${path}`));
         return true;
       }
 
@@ -691,20 +727,22 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
         if (ok) {
           setFileContents(prev => ({ ...prev, [path]: content }));
           if (selectedFile === path) setFileContent(content);
-          addLog('تعديل ملف محلي', path);
-          notifications.success('تم الحفظ', `تم تطبيق التعديلات بنجاح: ${path}`);
+          setWorkspaceRevision(v => v + 1);
+          addLog(ui('تعديل ملف محلي','Local file changed'), path);
+          notifications.success(ui('تم الحفظ', 'Saved'), ui(`تم تطبيق التعديلات بنجاح: ${path}`, `Changes applied successfully: ${path}`));
           return true;
         }
       }
       // Browser fallback when no Local Agent is available.
       setFileContents(prev => ({ ...prev, [path]: content }));
       if (selectedFile === path) setFileContent(content);
-      addLog('تعديل في الذاكرة', path);
-      notifications.info('تم التعديل', `تم تعديل ${path} في ذاكرة العمل`);
+      setWorkspaceRevision(v => v + 1);
+      addLog(ui('تعديل في الذاكرة','Changed in memory'), path);
+      notifications.info(ui('تم التعديل', 'Changed'), ui(`تم تعديل ${path} في ذاكرة العمل`, `${path} was changed in workspace memory`));
       return true;
     } catch (e: any) {
       console.error(e);
-      notifications.error('خطأ', `فشل تطبيق التعديل على ${path}`);
+      notifications.error(ui('خطأ', 'Error'), ui(`فشل تطبيق التعديل على ${path}`, `Failed to apply the change to ${path}`));
       return false;
     }
   };
@@ -712,11 +750,11 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
   // Export current project state to a downloadable ZIP file
   const handleExportProjectZip = async () => {
     if (!projectIndex) {
-      notifications.warning('تنبيه', 'يرجى فتح مشروع أو بدء الوضع التجريبي أولاً لتصديره');
+      notifications.warning(ui('تنبيه','Notice'), ui('يرجى فتح مشروع أو بدء الوضع التجريبي أولاً لتصديره','Open a project or start demo mode before exporting it'));
       return;
     }
     try {
-      notifications.info('جاري التجهيز', 'جاري تجهيز حزمة المشروع للتنزيل...');
+      notifications.info(ui('جاري التجهيز','Preparing'), ui('جاري تجهيز حزمة المشروع للتنزيل...','Preparing the project package for download...'));
       const filesToZip: Record<string, string> = {};
       for (const file of projectIndex.flatFiles) {
         if (fileContents[file.path]) {
@@ -736,11 +774,11 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
       a.download = `${projectIndex.rootName || 'project'}-${Date.now()}.zip`;
       a.click();
       URL.revokeObjectURL(url);
-      notifications.success('اكتمل التحميل', 'تم تنزيل المشروع كملف ZIP بنجاح!');
-      addLog('تصدير ZIP', projectIndex.rootName);
+      notifications.success(ui('اكتمل التحميل','Download complete'), ui('تم تنزيل المشروع كملف ZIP بنجاح!','The project was downloaded successfully as a ZIP file.'));
+      addLog(ui('تصدير ZIP','ZIP export'), projectIndex.rootName);
     } catch (err: any) {
       console.error('ZIP export failed', err);
-      notifications.error('خطأ', 'تعذر تصدير المشروع كـ ZIP');
+      notifications.error(ui('خطأ','Error'), ui('تعذر تصدير المشروع كـ ZIP','Unable to export the project as a ZIP archive'));
     }
   };
 
@@ -754,7 +792,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
     const newAllMemory = { ...allMemory, [updatedMemory.projectId]: updatedMemory };
     setAllMemory(newAllMemory);
     saveMemory(newAllMemory);
-    addLog('تحديث الذاكرة', updatedMemory.projectId);
+    addLog(ui('تحديث الذاكرة','Memory updated'), updatedMemory.projectId);
   };
 
 
@@ -780,12 +818,12 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
         setDirHandle(null);
         const selected = await localAgent.selectWorkspace(picked.path);
         if (!selected.success || !selected.data) {
-          throw new Error(selected.error?.message || 'تعذر ربط مساحة العمل بالـAgent');
+          throw new Error(selected.error?.message || ui('تعذر ربط مساحة العمل بالـAgent','Unable to connect the workspace to the Local Agent'));
         }
 
         const listed = await localAgent.listFiles('.', true);
         if (!listed.success || !Array.isArray(listed.data)) {
-          throw new Error(listed.error?.message || 'تعذر فهرسة مساحة العمل');
+          throw new Error(listed.error?.message || ui('تعذر فهرسة مساحة العمل','Unable to index the workspace'));
         }
 
         const index = buildIndex(
@@ -798,9 +836,11 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
         setSelectedFile(null);
         setFileContent('');
         setContext(null);
-        addLog('ربط مساحة العمل', selected.data.workspaceRoot);
-        addLog('فهرسة مكتملة', `${index.totalFiles} ملف, ${index.totalDirs} مجلد`);
-        notifications.success('تم ربط مساحة العمل', `تم تأمين "${selected.data.workspaceName}" داخل ULAB.`);
+        setAIActivityLog([]);
+        setAIBridgeActivity({ state: 'IDLE', action: '' });
+        addLog(ui('ربط مساحة العمل','Workspace connected'), selected.data.workspaceRoot);
+        addLog(ui('فهرسة مكتملة','Indexing complete'), `${index.totalFiles} ${ui('ملف','files')}, ${index.totalDirs} ${ui('مجلد','folders')}`);
+        notifications.success(ui('تم ربط مساحة العمل','Workspace connected'), `تم تأمين "${selected.data.workspaceName}" داخل ULAB.`);
         return;
       }
 
@@ -811,19 +851,19 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
         handle = await (window as any).showDirectoryPicker({ mode: 'read' });
       }
       setDirHandle(handle);
-      addLog('فتح مجلد', handle.name);
+      addLog(ui('فتح مجلد','Folder opened'), handle.name);
 
       const files = await readDirectory(handle);
       const index = buildIndex(handle.name, files);
       setProjectIndex(index);
       setIsIndexing(false);
-      addLog('فهرسة مكتملة', `${index.totalFiles} ملف, ${index.totalDirs} مجلد`);
-      notifications.success('تم فتح المجلد', `تم ربط المجلد "${handle.name}" بنجاح!`);
+      addLog(ui('فهرسة مكتملة','Indexing complete'), `${index.totalFiles} ${ui('ملف','files')}, ${index.totalDirs} ${ui('مجلد','folders')}`);
+      notifications.success(ui('تم فتح المجلد','Folder opened'), `تم ربط المجلد "${handle.name}" بنجاح!`);
     } catch (e: any) {
       if (e?.name !== 'AbortError') {
         console.error(e);
-        addLog('خطأ', e?.message || 'فشل فتح مساحة العمل');
-        notifications.error('فشل العملية', e?.message || 'فشل فتح مساحة العمل');
+        addLog(ui('خطأ','Error'), e?.message || ui('فشل فتح مساحة العمل','Unable to open the workspace'));
+        notifications.error(ui('فشل العملية','Operation failed'), e?.message || ui('فشل فتح مساحة العمل','Unable to open the workspace'));
       }
     } finally {
       setIsIndexing(false);
@@ -853,11 +893,11 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
       if (window.ulabDesktop?.isDesktop && localAgent.getSession()) {
         const result = await localAgent.readFile(path);
         if (!result.success || !result.data) {
-          throw new Error(result.error?.message || 'تعذر قراءة الملف');
+          throw new Error(result.error?.message || ui('تعذر قراءة الملف','Unable to read the file'));
         }
         setFileContents(prev => ({ ...prev, [path]: result.data!.content }));
         setFileContent(result.data.content);
-        addLog('Agent قراءة ملف', path);
+        addLog(ui('Agent قراءة ملف','Agent read file'), path);
         return;
       }
 
@@ -867,11 +907,11 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
         const content = await readFileContent(handle as FileSystemFileHandle);
         setFileContents(prev => ({ ...prev, [path]: content }));
         setFileContent(content);
-        addLog('قراءة ملف', path);
+        addLog(ui('قراءة ملف','Read file'), path);
       }
     } catch (e) {
       console.error(e);
-      notifications.error('تعذر قراءة الملف', e instanceof Error ? e.message : 'حدث خطأ أثناء القراءة');
+      notifications.error(ui('تعذر قراءة الملف','Unable to read the file'), e instanceof Error ? e.message : ui('حدث خطأ أثناء القراءة','An error occurred while reading the file'));
     }
   }, [dirHandle, fileContents]);
 
@@ -884,6 +924,53 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
       handleReadFile(path);
     }
   };
+
+  // Refresh the live project snapshot after AI mutations so the preview and
+  // the main file tree reflect what ULAB actually changed on disk.
+  const refreshWorkspaceSnapshot = useCallback(async () => {
+    if (!window.ulabDesktop?.isDesktop || !localAgent.getSession() || !projectIndex) return false;
+    setPreviewRefreshing(true);
+    try {
+      const listed = await localAgent.listFiles('.', true);
+      if (!listed.success || !Array.isArray(listed.data)) return false;
+      const nextIndex = buildIndex(
+        projectIndex.rootName,
+        buildAgentFileNodes(listed.data)
+      );
+      setProjectIndex(prev => {
+        if (!prev || prev.rootName !== nextIndex.rootName) return nextIndex;
+        const signature = (value: ProjectIndex) => value.flatFiles
+          .map(file => `${file.path}:${file.size ?? 0}`)
+          .join('|');
+        return signature(prev) === signature(nextIndex) ? prev : nextIndex;
+      });
+
+      if (selectedFile) {
+        const read = await localAgent.readFile(selectedFile);
+        if (read.success && read.data) {
+          const content = read.data.content;
+          setFileContents(prev => prev[selectedFile] === content ? prev : { ...prev, [selectedFile]: content });
+          setFileContent(prev => prev === content ? prev : content);
+        }
+      }
+      return true;
+    } catch (error) {
+      console.warn('Unable to refresh live workspace snapshot', error);
+      return false;
+    } finally {
+      setPreviewRefreshing(false);
+    }
+  }, [projectIndex?.rootName, selectedFile]);
+
+  // Keep the workspace view live even when changes happen through terminal
+  // commands or another approved local operation rather than a direct file tool.
+  useEffect(() => {
+    if (!window.ulabDesktop?.isDesktop || !projectIndex) return;
+    const timer = window.setInterval(() => {
+      void refreshWorkspaceSnapshot();
+    }, 3000);
+    return () => window.clearInterval(timer);
+  }, [projectIndex?.rootName, refreshWorkspaceSnapshot]);
 
   // Extract context
   const handleExtractContext = async (query: string): Promise<{ context: ContextResult; fileContents: Record<string, string> } | null> => {
@@ -953,6 +1040,63 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
     }
   }, [agentConnection.status, refreshAudit]);
 
+  // Keep the workspace preview synchronized with the autonomous AI bridge.
+  // The AI can continue the same conversation while ULAB executes one tool,
+  // returns its result, and waits for the next assistant turn.
+  useEffect(() => {
+    const desktop = window.ulabDesktop;
+    if (!desktop?.isDesktop) return;
+
+    const offState = desktop.onAIBridgeState?.((raw: unknown) => {
+      const data = raw as any;
+      setAIBridgeActivity({
+        state: String(data?.state || 'IDLE'),
+        action: String(data?.action || ''),
+      });
+    });
+
+    const offTool = desktop.onAIToolStatus?.((raw: unknown) => {
+      const data = raw as any;
+      const action = String(data?.action || '');
+      const status = String(data?.status || '');
+      const resultData = data?.result?.data || data?.result?.result?.data;
+      const params = data?.params || data?.result?.params || {};
+      const pathFromResult = typeof resultData?.path === 'string' ? resultData.path
+        : typeof params?.path === 'string' ? params.path
+        : undefined;
+      setAIActivityLog(prev => [
+        { timestamp: Date.now(), status, action, path: pathFromResult },
+        ...prev,
+      ].slice(0, 16));
+      setAIBridgeActivity({
+        state: status === 'executed' ? 'RESULT_RETURNED'
+          : status === 'approval_required' ? 'APPROVAL_REQUIRED'
+          : status === 'error' || status === 'rejected' || status === 'denied' ? 'AGENT_ERROR'
+          : String(data?.status || 'IDLE'),
+        action,
+      });
+
+      if (status === 'executed') {
+        addLog('AI Tool', action);
+        if (action === 'files.create' || action === 'files.write' || action === 'files.delete' || action === 'files.approve' ||
+            action === 'files.reject' || action === 'terminal.execute' || action === 'testing.run') {
+          setWorkspaceRevision(v => v + 1);
+          void refreshWorkspaceSnapshot();
+          if (pathFromResult && action !== 'files.delete') {
+            setSelectedFile(pathFromResult);
+            void handleReadFile(pathFromResult);
+          }
+          setActiveRightPanel(action === 'terminal.execute' || action === 'testing.run' ? 'terminal' : 'developer');
+        }
+      }
+    });
+
+    return () => {
+      offState?.();
+      offTool?.();
+    };
+  }, [refreshWorkspaceSnapshot]);
+
   useEffect(() => {
     if (workspacePermissionId) {
       const loaded = loadWorkspacePermissions(workspacePermissionId);
@@ -994,6 +1138,10 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
           case '2':
             e.preventDefault();
             setActiveRightPanel('context');
+            break;
+          case '3':
+            e.preventDefault();
+            setActiveRightPanel('preview');
             break;
         }
       }
@@ -1074,16 +1222,31 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
             <span>AI Bridge</span>
           </button>
 
+          {/* Live Project Preview */}
+          <button
+            onClick={() => setActiveRightPanel('preview')}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all border ${
+              activeRightPanel === 'preview'
+                ? 'bg-cyan-500/10 border-cyan-400/30 text-cyan-200'
+                : 'bg-white/[0.03] border-white/[0.08] text-[#aab7d0] hover:text-white hover:bg-white/[0.06]'
+            }`}
+            title="عرض معاينة المشروع وتحديثها تلقائيًا بعد تنفيذ AI"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>{ui('معاينة', 'Preview')}</span>
+            {aiBridgeActivity.action && <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 animate-pulse" />}
+          </button>
+
           {/* Large Project Slicer Button */}
           {/* Download Project ZIP Button */}
           {projectIndex && (
             <button
               onClick={handleExportProjectZip}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#181824] hover:bg-[#222234] text-[#cbd5e1] border border-[#2a2a3a] transition-colors"
-              title="تنزيل المشروع كاملاً بصيغة ZIP"
+              title={ui('تنزيل المشروع كاملاً بصيغة ZIP', 'Download the complete project as a ZIP archive')}
             >
               <Download className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden lg:inline">تحميل ZIP</span>
+              <span className="hidden lg:inline">{ui('تحميل ZIP', 'Download ZIP')}</span>
             </button>
           )}
 
@@ -1091,7 +1254,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
             <button onClick={() => setShowPermissions(true)} className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-[#252530] hover:bg-[#2a2a3a] transition-colors">
               {permissionMode === 'readonly' ? <Lock className="w-3 h-3 text-green-400" /> : <Unlock className="w-3 h-3 text-yellow-400" />}
               <span className="hidden sm:inline">
-                {permissionMode === 'readonly' ? 'قراءة فقط' : permissionMode === 'assisted' ? 'بمساعدة' : 'وكيل'}
+                {permissionMode === 'readonly' ? ui('قراءة فقط', 'Read-only') : permissionMode === 'assisted' ? ui('بمساعدة', 'Assisted') : ui('وكيل', 'Agent')}
               </span>
             </button>
           )}
@@ -1099,12 +1262,12 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
           <button
             onClick={() => setShowLegalModal(true)}
             className="p-1.5 rounded hover:bg-[#252530] transition-colors text-[#94a3b8]"
-            title="سياسة الخصوصية وشروط الاستخدام"
+            title={ui('سياسة الخصوصية وشروط الاستخدام', 'Privacy policy and terms of use')}
           >
             <Shield className="w-4 h-4 text-cyan-400" />
           </button>
 
-          <button onClick={() => setShowShortcuts(true)} className="ulab-icon-button" title="اختصارات لوحة المفاتيح" aria-label="اختصارات لوحة المفاتيح">
+          <button onClick={() => setShowShortcuts(true)} className="ulab-icon-button" title={ui('اختصارات لوحة المفاتيح', 'Keyboard shortcuts')} aria-label={ui('اختصارات لوحة المفاتيح', 'Keyboard shortcuts')}>
             <Keyboard className="w-4 h-4" />
           </button>
           <LanguageSwitcher />
@@ -1121,9 +1284,9 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
           {/* Sidebar Tabs */}
           <div className="ulab-sidebar-tabs flex">
             {[
-              { id: 'files' as const, icon: <FolderTree className="w-4 h-4" />, label: 'الملفات' },
-              { id: 'search' as const, icon: <Search className="w-4 h-4" />, label: 'بحث' },
-              { id: 'map' as const, icon: <Layers className="w-4 h-4" />, label: 'خريطة' },
+              { id: 'files' as const, icon: <FolderTree className="w-4 h-4" />, label: ui('الملفات', 'Files') },
+              { id: 'search' as const, icon: <Search className="w-4 h-4" />, label: ui('بحث', 'Search') },
+              { id: 'map' as const, icon: <Layers className="w-4 h-4" />, label: ui('خريطة', 'Map') },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -1145,30 +1308,30 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
                 {!projectIndex ? (
                   <div className="text-center py-8">
                     <FolderTree className="w-10 h-10 text-[#2a2a3a] mx-auto mb-3" />
-                    <p className="text-xs text-[#94a3b8] mb-3">اختر مجلد مشروع</p>
+                    <p className="text-xs text-[#94a3b8] mb-3">{ui('اختر مجلد مشروع', 'Choose a project folder')}</p>
                     <button
                       onClick={handleOpenFolder}
                       disabled={!isFSASupported}
                       className="ulab-btn ulab-btn-primary w-full mb-2"
                     >
-                      {isFSASupported ? 'فتح مجلد' : 'المتصفح غير مدعوم'}
+                      {isFSASupported ? ui('فتح مجلد', 'Open folder') : ui('المتصفح غير مدعوم', 'Browser mode unavailable')}
                     </button>
 
                     {!isFSASupported && (
-                      <p className="text-[10px] text-[#94a3b8] mt-2">استخدم Chrome أو Edge في وضع المتصفح فقط.</p>
+                      <p className="text-[10px] text-[#94a3b8] mt-2">{ui('استخدم Chrome أو Edge في وضع المتصفح فقط.', 'Use Chrome or Edge for browser-only mode.')}</p>
                     )}
                   </div>
                 ) : isIndexing ? (
                   <div className="text-center py-8">
                     <RefreshCw className="w-8 h-8 text-indigo-400 mx-auto mb-3 animate-spin" />
-                    <p className="text-xs text-[#94a3b8]">جاري الفهرسة...</p>
+                    <p className="text-xs text-[#94a3b8]">{ui('جاري الفهرسة...', 'Indexing...')}</p>
                   </div>
                 ) : (
                   <div>
                     <div className="flex items-center justify-between px-2 py-1.5 mb-1">
-                      <span className="text-[10px] text-[#64748b]">{projectIndex.totalFiles} ملف</span>
+                      <span className="text-[10px] text-[#64748b]">{projectIndex.totalFiles} {ui('ملف', 'files')}</span>
                       <button onClick={handleOpenFolder} className="text-[10px] text-indigo-400 hover:text-indigo-300">
-                        تغيير المجلد
+                        {ui('تغيير المجلد', 'Change folder')}
                       </button>
                     </div>
                     {projectIndex.files.map(node => (
@@ -1199,7 +1362,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
         <div className="ulab-editor flex-1 flex flex-col overflow-hidden">
           {selectedFile ? (
             <div className="flex-1 overflow-hidden">
-              <CodeViewer content={fileContent || 'جاري التحميل...'} filename={selectedFile} />
+              <CodeViewer content={fileContent || ui('جاري التحميل...', 'Loading...')} filename={selectedFile} />
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
@@ -1211,8 +1374,8 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
                 <h2 className="text-3xl md:text-4xl font-black tracking-tight mb-3">Your workspace, connected.</h2>
                 <p className="text-sm md:text-[15px] leading-7 text-[#8d9bb7] mb-7 max-w-xl mx-auto">
                   {projectIndex
-                    ? 'اختر ملفًا من الشجرة لعرضه، أو استخدم AI Bridge لإرسال السياق وتشغيل المهام المحلية دون نسخ ولصق.'
-                    : 'افتح مجلد مشروعك للبدء. ULAB يربط جلسة الذكاء الاصطناعي بمساحة عمل محلية محمية.'}
+                    ? ui('اختر ملفًا من الشجرة لعرضه، أو استخدم AI Bridge لإرسال السياق وتشغيل المهام المحلية دون نسخ ولصق.', 'Select a file from the tree, or use AI Bridge to send local context and run workspace tasks without copy and paste.')
+                    : ui('افتح مجلد مشروعك للبدء. ULAB يربط جلسة الذكاء الاصطناعي بمساحة عمل محلية محمية.', 'Open a project folder to get started. ULAB connects the AI session to a protected local workspace.')}
                 </p>
                 {!projectIndex && (
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -1223,7 +1386,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
                     >
                       <span className="flex items-center gap-2">
                         <FolderTree className="w-5 h-5" />
-                        فتح مجلد المشروع
+                        {ui('فتح مجلد المشروع', 'Open project folder')}
                       </span>
                     </button>
 
@@ -1231,7 +1394,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
                 )}
                 {!projectIndex && !isFSASupported && (
                   <p className="text-xs text-[#94a3b8] mt-4">
- افتح ULAB Desktop للحصول على اتصال Local Agent كامل.
+                    {ui('افتح ULAB Desktop للحصول على اتصال Local Agent كامل.', 'Open ULAB Desktop to use the full Local Agent connection.')}
                   </p>
                 )}
 
@@ -1240,19 +1403,19 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
                   <div className="mt-8 grid grid-cols-4 gap-4 max-w-lg mx-auto">
                     <div className="p-3 rounded-lg bg-[#111118] border border-[#2a2a3a]">
                       <p className="text-lg font-bold text-indigo-400">{projectIndex.totalFiles}</p>
-                      <p className="text-[10px] text-[#94a3b8]">ملف</p>
+                      <p className="text-[10px] text-[#94a3b8]">{ui('ملف', 'files')}</p>
                     </div>
                     <div className="p-3 rounded-lg bg-[#111118] border border-[#2a2a3a]">
                       <p className="text-lg font-bold text-cyan-400">{projectIndex.totalDirs}</p>
-                      <p className="text-[10px] text-[#94a3b8]">مجلد</p>
+                      <p className="text-[10px] text-[#94a3b8]">{ui('مجلد', 'folders')}</p>
                     </div>
                     <div className="p-3 rounded-lg bg-[#111118] border border-[#2a2a3a]">
                       <p className="text-lg font-bold text-green-400">{formatFileSize(projectIndex.totalSize)}</p>
-                      <p className="text-[10px] text-[#94a3b8]">الحجم</p>
+                      <p className="text-[10px] text-[#94a3b8]">{ui('الحجم', 'size')}</p>
                     </div>
                     <div className="p-3 rounded-lg bg-[#111118] border border-[#2a2a3a]">
                       <p className="text-lg font-bold text-purple-400">{Object.keys(projectIndex.extensions).length}</p>
-                      <p className="text-[10px] text-[#94a3b8]">نوع ملف</p>
+                      <p className="text-[10px] text-[#94a3b8]">{ui('نوع ملف', 'file types')}</p>
                     </div>
                   </div>
                 )}
@@ -1266,15 +1429,17 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
           {/* Right Panel Tabs */}
           <div className="ulab-inspector-tabs flex overflow-x-auto">
             {[
+              { id: 'developer' as const, icon: <Code2 className="w-4 h-4" />, label: ui('المحرر', 'Code') },
               { id: 'bridge' as const, icon: <Network className="w-4 h-4" />, label: 'Bridge' },
-              { id: 'contextBuilder' as const, icon: <Layers className="w-4 h-4" />, label: 'السياق' },
-              { id: 'memory' as const, icon: <Database className="w-4 h-4" />, label: 'الذاكرة' },
-              { id: 'permissions' as const, icon: <Shield className="w-4 h-4" />, label: 'الصلاحيات' },
+              { id: 'preview' as const, icon: <Eye className="w-4 h-4" />, label: ui('المعاينة', 'Preview') },
+              { id: 'contextBuilder' as const, icon: <Layers className="w-4 h-4" />, label: ui('السياق', 'Context') },
+              { id: 'memory' as const, icon: <Database className="w-4 h-4" />, label: ui('الذاكرة', 'Memory') },
+              { id: 'permissions' as const, icon: <Shield className="w-4 h-4" />, label: ui('الصلاحيات', 'Permissions') },
 
               { id: 'git' as const, icon: <GitBranch className="w-4 h-4" />, label: 'Git' },
               { id: 'terminal' as const, icon: <Terminal className="w-4 h-4" />, label: 'Terminal' },
-              { id: 'settings' as const, icon: <SettingsIcon className="w-4 h-4" />, label: 'إعدادات' },
-              { id: 'log' as const, icon: <Clock className="w-4 h-4" />, label: 'السجل' },
+              { id: 'settings' as const, icon: <SettingsIcon className="w-4 h-4" />, label: ui('إعدادات', 'Settings') },
+              { id: 'log' as const, icon: <Clock className="w-4 h-4" />, label: ui('السجل', 'Log') },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -1297,6 +1462,19 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
             {activeRightPanel === 'log' && (
               <OperationLog logs={operationLog} onClear={() => setOperationLog([])} />
             )}
+            {activeRightPanel === 'developer' && (
+              <DeveloperWorkbench
+                index={projectIndex}
+                selectedFile={selectedFile}
+                fileContent={fileContent}
+                activity={aiActivityLog}
+                workspaceRevision={workspaceRevision}
+                refreshing={previewRefreshing}
+                onRefresh={() => void refreshWorkspaceSnapshot()}
+                onOpenFile={handleSelectFile}
+                onSaveFile={async (path, content) => applyFileModification(path, content)}
+              />
+            )}
             {activeRightPanel === 'bridge' && (
               <CurrentAIBridgePanel
                 context={context}
@@ -1304,6 +1482,17 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
                 query={lastQuery}
                 projectName={projectIndex?.rootName || 'No Project'}
                 onPrepareContext={handleExtractContext}
+              />
+            )}
+            {activeRightPanel === 'preview' && (
+              <ProjectPreview
+                index={projectIndex}
+                workspaceRevision={workspaceRevision}
+                bridgeState={aiBridgeActivity.state}
+                lastAction={aiBridgeActivity.action}
+                activityLog={aiActivityLog}
+                refreshing={previewRefreshing}
+                onRefresh={() => void refreshWorkspaceSnapshot()}
               />
             )}
 
@@ -1356,19 +1545,19 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
                 connected={agentConnection.status === 'connected' && !!agentConnection.session}
                 onExecuteCommand={async (command, args = [], approved = false) => {
                   if (permissionMode === 'readonly') {
-                    notifications.warning('العملية محظورة', 'وضع القراءة فقط يمنع تشغيل أوامر Terminal.');
+                    notifications.warning(ui('العملية محظورة', 'Operation blocked'), ui('وضع القراءة فقط يمنع تشغيل أوامر Terminal.', 'Read-only mode prevents terminal commands.'));
                     return { success: false, error: { message: 'READONLY_MODE' } };
                   }
                   const terminalPermission = resolvePermission(permissionConfig, 'runTerminal', command);
                   if (terminalPermission === 'deny') {
-                    notifications.warning('الأمر محظور', 'إعدادات الصلاحيات تمنع تنفيذ أوامر Terminal في هذه المساحة.');
+                    notifications.warning(ui('الأمر محظور', 'Command blocked'), ui('إعدادات الصلاحيات تمنع تنفيذ أوامر Terminal في هذه المساحة.', 'Workspace permissions prevent terminal commands here.'));
                     addLog('رفض Terminal', command);
                     return { success: false, error: { message: 'PERMISSION_DENIED' } };
                   }
                   const result = await localAgent.executeTerminal(command, args, approved);
                   addLog('Terminal Execute', `${command} ${args.join(' ')}`.trim());
                   if (!result.success) {
-                    notifications.error('فشل تنفيذ الأمر', result.error?.message || 'تعذر تنفيذ الأمر');
+                    notifications.error(ui('فشل تنفيذ الأمر', 'Command failed'), result.error?.message || ui('تعذر تنفيذ الأمر', 'Unable to execute the command'));
                   }
                   return result;
                 }}
@@ -1386,7 +1575,33 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
         <ApprovalModal
           action={pendingApproval}
           onApprove={async () => {
-            const aiRequestId = pendingApproval.details?.approvalId;
+            const requestId = pendingApproval.details?.approvalId;
+            const source = pendingApproval.details?.source;
+            if (source === 'mcp' && requestId) {
+              const aiAction = String(pendingApproval.details?.action || '');
+              const permissionKey = getPermissionKeyForAIAction(aiAction);
+              const permissionDecision = permissionKey
+                ? resolvePermission(permissionConfig, permissionKey, pendingApproval.resource)
+                : 'ask';
+              if (permissionMode === 'readonly' || permissionDecision === 'deny') {
+                await localAgent.rejectMcpRequest(String(requestId));
+                notifications.warning('Operation blocked', permissionMode === 'readonly' ? 'Read-only mode blocks sensitive AI operations.' : 'Workspace permissions block this operation.');
+                addLog('Blocked MCP operation', aiAction + ' - ' + String(pendingApproval.resource));
+                setPendingApproval(null);
+                return;
+              }
+              const result: any = await localAgent.approveMcpRequest(String(requestId));
+              if (!result?.success) {
+                notifications.error('Execution failed', result?.error?.message || 'The MCP approval could not be applied.');
+                return;
+              }
+              addLog('Approved MCP operation', `${pendingApproval.type} - ${pendingApproval.resource}`);
+              notifications.success('Executed', pendingApproval.description);
+              setWorkspaceRevision(v => v + 1);
+              setPendingApproval(null);
+              return;
+            }
+            const aiRequestId = requestId;
             if (aiRequestId && window.ulabDesktop?.aiApprove) {
               const aiAction = String(pendingApproval.details?.action || '');
               const permissionKey = getPermissionKeyForAIAction(aiAction);
@@ -1411,22 +1626,32 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
                 addLog('فشل موافقة AI', String(pendingApproval.resource));
                 return;
               }
-              addLog('موافقة AI', `${pendingApproval.type} - ${pendingApproval.resource}`);
-              notifications.success('تم التنفيذ', pendingApproval.description);
+              addLog('Approved AI operation', `${pendingApproval.type} - ${pendingApproval.resource}`);
+              notifications.success('Executed', pendingApproval.description);
+              setWorkspaceRevision(v => v + 1);
               setPendingApproval(null);
               return;
             }
             addLog('موافقة', `${pendingApproval.type} - ${pendingApproval.resource}`);
-            notifications.success('تمت الموافقة', pendingApproval.description);
+            notifications.success(ui('تمت الموافقة', 'Approved'), pendingApproval.description);
             setPendingApproval(null);
           }}
           onDeny={async () => {
-            const aiRequestId = pendingApproval.details?.approvalId;
+            const requestId = pendingApproval.details?.approvalId;
+            const source = pendingApproval.details?.source;
+            if (source === 'mcp' && requestId) {
+              await localAgent.rejectMcpRequest(String(requestId));
+              addLog('Rejected MCP operation', `${pendingApproval.type} - ${pendingApproval.resource}`);
+              notifications.warning('Rejected', pendingApproval.description);
+              setPendingApproval(null);
+              return;
+            }
+            const aiRequestId = requestId;
             if (aiRequestId && window.ulabDesktop?.aiReject) {
               await window.ulabDesktop.aiReject(aiRequestId);
             }
-            addLog('رفض AI', `${pendingApproval.type} - ${pendingApproval.resource}`);
-            notifications.warning('تم الرفض', pendingApproval.description);
+            addLog('Rejected AI operation', `${pendingApproval.type} - ${pendingApproval.resource}`);
+            notifications.warning(ui('تم الرفض', 'Rejected'), pendingApproval.description);
             setPendingApproval(null);
           }}
         />
@@ -1449,7 +1674,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
         <span
           className="flex items-center gap-1 cursor-pointer hover:text-white transition-colors"
           onClick={() => setShowAgentStatusModal(true)}
-          title="انقر لعرض وإدارة اتصال Local Agent"
+          title={ui('انقر لعرض وإدارة اتصال Local Agent', 'Click to view and manage the Local Agent connection')}
         >
           <div className={`w-1.5 h-1.5 rounded-full ${
             agentConnection.status === 'connected' ? 'bg-green-400' :
@@ -1462,7 +1687,7 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
         </span>
         <span className="flex items-center gap-1">
           <Shield className="w-3 h-3 text-green-400" />
-          Security: Active
+          {ui('الأمان: نشط','Security: Active')}
         </span>
         {selectedFile && (
           <span className="flex items-center gap-1">
@@ -1472,17 +1697,17 @@ export default function Workspace({ onBack }: { onBack: () => void }) {
         )}
         <span className="mr-auto flex items-center gap-1">
           <Shield className="w-3 h-3" />
-          {permissionMode === 'readonly' ? 'وضع القراءة' : permissionMode === 'assisted' ? 'بمساعدة' : 'وكيل'}
+          {permissionMode === 'readonly' ? ui('وضع القراءة','Read-only') : permissionMode === 'assisted' ? ui('بمساعدة','Assisted') : ui('وكيل','Agent')}
         </span>
         <span>ULAB 3.10.8</span>
         <span className="hidden sm:flex items-center gap-2 text-[#4a5568]">
-          <span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+O</span> فتح
-          <span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+F</span> بحث
-          <span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+1</span> Bridge&nbsp;&nbsp;<span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+2</span> Context
+          <span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+O</span> {ui('فتح','Open')}
+          <span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+F</span> {ui('بحث','Search')}
+          <span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+1</span> Bridge&nbsp;&nbsp;<span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+2</span> Context&nbsp;&nbsp;<span className="px-1 rounded bg-[#252530] text-[9px]">Ctrl+3</span> Preview
         </span>
         <span className="flex items-center gap-1">
           <Lock className="w-3 h-3 text-green-400" />
-          محلي
+          {ui('محلي','Local')}
         </span>
       </footer>
 

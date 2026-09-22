@@ -8,6 +8,11 @@ import { ContextBuilder } from './ContextBuilder';
 import { WorkspaceSession, StructuredError, AuditLogEntry } from './types';
 import { ULABMCPServer } from './MCPServer';
 
+const MCP_SENSITIVE_ACTIONS = new Set([
+  'files.create', 'files.write', 'files.delete',
+  'git.commit', 'git.push', 'terminal.execute', 'testing.run',
+]);
+
 export interface LocalAgentServerConfig {
   port: number;
   token?: string;
@@ -26,6 +31,16 @@ export class LocalAgentServer {
   private token: string;
   private server: http.Server | null = null;
   private wss: WebSocket.Server | null = null;
+  private readonly authenticatedClients = new Set<WebSocket.WebSocket>();
+  private readonly eventListeners = new Set<(event: Record<string, unknown>) => void>();
+  private readonly pendingMcpApprovals = new Map<string, {
+    action: string;
+    params: Record<string, unknown>;
+    requestId: string;
+    sessionId: string;
+    resolve: (approved: boolean) => void;
+    timer: NodeJS.Timeout;
+  }>();
 
   private currentSession: WorkspaceSession | null = null;
   private workspaceManager: WorkspaceManager | null = null;
@@ -74,6 +89,67 @@ export class LocalAgentServer {
 
   public getAuditLogs(): AuditLogEntry[] {
     return [...this.auditLogs];
+  }
+
+  public onEvent(listener: (event: Record<string, unknown>) => void): () => void {
+    this.eventListeners.add(listener);
+    return () => this.eventListeners.delete(listener);
+  }
+
+  private emitEvent(event: string, payload: Record<string, unknown> = {}) {
+    const message = { type: 'event', event, ...payload };
+    for (const listener of this.eventListeners) {
+      try { listener(message); } catch { /* isolate event listeners */ }
+    }
+    const raw = JSON.stringify(message);
+    for (const client of this.authenticatedClients) {
+      if (client.readyState !== WebSocket.OPEN) continue;
+      try { client.send(raw); } catch { /* ignore disconnected local clients */ }
+    }
+  }
+
+  private requestMcpApproval(action: string, params: Record<string, unknown>, requestId: string): Promise<boolean> {
+    const session = this.currentSession;
+    if (!session) return Promise.resolve(false);
+    const approvalId = `mcp-approval-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const resource = String(params.path || params.command || params.remote || action);
+    const description = `MCP requested ${action} on ${resource}`;
+    return new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => {
+        const pending = this.pendingMcpApprovals.get(approvalId);
+        if (!pending) return;
+        this.pendingMcpApprovals.delete(approvalId);
+        this.logAudit({ operation: action, relativePath: resource, approval: 'REJECTED', result: 'DENIED', detail: 'MCP approval expired' });
+        resolve(false);
+      }, 2 * 60 * 1000);
+      this.pendingMcpApprovals.set(approvalId, { action, params, requestId, sessionId: session.sessionId, resolve, timer });
+      this.emitEvent('mcp-approval-request', {
+        approvalId,
+        action,
+        params,
+        resource,
+        description,
+        sessionId: session.sessionId,
+      });
+    });
+  }
+
+  public approveMcpRequest(approvalId: string): boolean {
+    const pending = this.pendingMcpApprovals.get(approvalId);
+    if (!pending || !this.currentSession || pending.sessionId !== this.currentSession.sessionId) return false;
+    clearTimeout(pending.timer);
+    this.pendingMcpApprovals.delete(approvalId);
+    pending.resolve(true);
+    return true;
+  }
+
+  public rejectMcpRequest(approvalId: string): boolean {
+    const pending = this.pendingMcpApprovals.get(approvalId);
+    if (!pending || !this.currentSession || pending.sessionId !== this.currentSession.sessionId) return false;
+    clearTimeout(pending.timer);
+    this.pendingMcpApprovals.delete(approvalId);
+    pending.resolve(false);
+    return true;
   }
 
   public logAudit(entry: {
@@ -239,7 +315,7 @@ export class LocalAgentServer {
           res.end(
             JSON.stringify({
               status: 'ok',
-              version: '3.10.8',
+              version: '3.10.9',
               hasActiveWorkspace: !!this.currentSession,
               workspace: this.currentSession?.workspaceName || null,
             })
@@ -268,6 +344,10 @@ export class LocalAgentServer {
         const remoteIp = req.socket.remoteAddress || '127.0.0.1';
         let authenticated = !this.token; // If no token configured, auto-authenticated
 
+        ws.on('close', () => {
+          this.authenticatedClients.delete(ws);
+        });
+
         ws.on('message', async (data: WebSocket.RawData) => {
           try {
             const raw = data.toString('utf-8');
@@ -289,6 +369,7 @@ export class LocalAgentServer {
               const msgToken = parsed.token;
               if (msgToken && msgToken === this.token) {
                 authenticated = true;
+                this.authenticatedClients.add(ws);
               } else {
                 ws.send(JSON.stringify({requestId:parsed.requestId,success:false,error:{code:'UNAUTHORIZED',message:'Invalid or missing security token'}}));
                 ws.close();
@@ -312,6 +393,12 @@ export class LocalAgentServer {
 
   public stop(): Promise<void> {
     return new Promise((resolve) => {
+      for (const pending of this.pendingMcpApprovals.values()) {
+        clearTimeout(pending.timer);
+        pending.resolve(false);
+      }
+      this.pendingMcpApprovals.clear();
+      this.authenticatedClients.clear();
       if (this.wss) {
         for (const client of this.wss.clients) {
           try {
@@ -378,7 +465,7 @@ export class LocalAgentServer {
     }
 
     const action = msg.action;
-    const params = (msg.params && typeof msg.params === 'object' && !Array.isArray(msg.params)) ? msg.params : {};
+    let params = (msg.params && typeof msg.params === 'object' && !Array.isArray(msg.params)) ? msg.params : {};
 
     // 4. Rate Limiting Check
     if (!this.checkRateLimit(clientId)) {
@@ -405,6 +492,22 @@ export class LocalAgentServer {
           message: 'Invalid or missing authentication token',
           requestId,
         },
+      };
+    }
+
+    if (action === 'mcp.approve' || action === 'mcp.reject') {
+      const approvalId = params.approvalId;
+      if (!approvalId || typeof approvalId !== 'string') {
+        return { requestId, success: false, error: { code: 'INVALID_REQUEST', message: 'approvalId is required', requestId } };
+      }
+      const accepted = action === 'mcp.approve'
+        ? this.approveMcpRequest(approvalId)
+        : this.rejectMcpRequest(approvalId);
+      return {
+        requestId,
+        success: accepted,
+        action,
+        error: accepted ? undefined : { code: 'APPROVAL_REQUIRED', message: 'Approval request is missing, expired, or belongs to another workspace session', requestId },
       };
     }
 
@@ -464,6 +567,25 @@ export class LocalAgentServer {
             requestId,
           },
         };
+      }
+
+      // MCP callers can request sensitive operations, but they can never grant
+      // themselves approval. ULAB pauses the MCP request until a local human
+      // approves or rejects it through the desktop application.
+      if (msg.source === 'mcp' && MCP_SENSITIVE_ACTIONS.has(action)) {
+        const approved = await this.requestMcpApproval(action, params, requestId);
+        if (!approved) {
+          return {
+            requestId,
+            success: false,
+            error: {
+              code: 'APPROVAL_REQUIRED',
+              message: 'Human approval was denied or expired for this MCP operation',
+              requestId,
+            },
+          };
+        }
+        params = { ...params, approved: true, __ulabMcpApproved: true };
       }
 
       // 8. File Operations (Server-enforced approvals and sandbox)
@@ -606,7 +728,7 @@ export class LocalAgentServer {
       }
 
       // WRITE: Server enforces explicit approval!
-      if (action === 'workspace.applyChange' || action === 'files.write') {
+      if (action === 'workspace.applyChange' || action === 'files.write' || action === 'files.create') {
         const targetPath = params.path || (params.changeId ? this.workspaceManager.getProposal(params.changeId)?.path : undefined);
         if (!params.approved) {
           this.logAudit({
@@ -635,19 +757,21 @@ export class LocalAgentServer {
         }
         const contentToWrite = params.content ?? (params.changeId ? this.workspaceManager.getProposal(params.changeId)?.proposedContent : '');
         try {
-          await this.workspaceManager.applyChange(targetPath, contentToWrite ?? '', params.changeId);
+          await this.workspaceManager.applyChange(targetPath, contentToWrite ?? '', params.changeId, action === 'files.create');
+          const writeOperation = action === 'files.create' ? 'files.create' : 'files.write';
+          const writeResultAction = action === 'files.create' ? 'files.created' : 'files.written';
           this.logAudit({
-            operation: 'files.write',
+            operation: writeOperation,
             relativePath: targetPath,
             approval: 'APPROVED',
             result: 'SUCCESS',
-            detail: params.changeId ? `Applied change ${params.changeId}` : 'Direct write applied',
+            detail: params.changeId ? `Applied change ${params.changeId}` : (action === 'files.create' ? 'File created' : 'Direct write applied'),
           });
-          return { requestId, success: true, action: 'files.written', data: { path: targetPath } };
+          return { requestId, success: true, action: writeResultAction, data: { path: targetPath } };
         } catch (err: any) {
           const isDenied = err.code === 'ACCESS_DENIED' || err.message?.toLowerCase().includes('denied') || err.message?.toLowerCase().includes('outside') || err.message?.toLowerCase().includes('sensitive') || err.message?.toLowerCase().includes('traversal') || err.message?.toLowerCase().includes('prohibited');
           this.logAudit({
-            operation: 'files.write',
+            operation: action === 'files.create' ? 'files.create' : 'files.write',
             relativePath: targetPath,
             approval: 'APPROVED',
             result: 'DENIED',

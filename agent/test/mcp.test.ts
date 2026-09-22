@@ -56,8 +56,13 @@ async function main(): Promise<void> {
     const toolNames = list.result.tools.map((tool: any) => tool.name);
     assert.ok(toolNames.includes('files_read'));
     assert.ok(toolNames.includes('files_propose'));
-    assert.ok(!toolNames.includes('files_write'));
-    assert.ok(!toolNames.includes('terminal_execute'));
+    assert.ok(toolNames.includes('files_create'));
+    assert.ok(toolNames.includes('files_write'));
+    assert.ok(toolNames.includes('files_delete'));
+    assert.ok(toolNames.includes('terminal_execute'));
+    assert.ok(toolNames.includes('testing_run'));
+    assert.ok(toolNames.includes('git_commit'));
+    assert.ok(toolNames.includes('git_push'));
     assert.equal(list.result.ttlMs, 300000);
     assert.equal(list.result.cacheScope, 'global');
 
@@ -109,19 +114,105 @@ async function main(): Promise<void> {
     assert.equal(proposalData.data.status, 'pending');
     assert.equal(fs.readFileSync(sourcePath, 'utf8'), original);
 
-    const unknown = await mcp.handleMessage({
+    const approveNextMcp = (approved: boolean) => new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => { off(); reject(new Error('Timed out waiting for MCP approval event')); }, 2000);
+      const off = agent.onEvent((event: any) => {
+        if (event.event !== 'mcp-approval-request') return;
+        clearTimeout(timer);
+        off();
+        const accepted = approved ? agent.approveMcpRequest(String(event.approvalId)) : agent.rejectMcpRequest(String(event.approvalId));
+        assert.equal(accepted, true);
+        resolve();
+      });
+    });
+
+    const createApproval = approveNextMcp(true);
+    const createPromise = mcp.handleMessage({
       jsonrpc: '2.0',
       id: 6,
       method: 'tools/call',
       params: {
-        name: 'files_write',
-        arguments: { path: 'hello.txt', content: 'must not write' },
-        _meta: {
-          'io.modelcontextprotocol/protocolVersion': MODERN,
-        },
+        name: 'files_create',
+        // This must NOT grant approval by itself; the local agent remains authoritative.
+        arguments: { path: 'created-by-mcp.txt', content: 'created', approved: true },
+        _meta: { 'io.modelcontextprotocol/protocolVersion': MODERN },
       },
     }, token);
-    assert.equal(unknown.error.code, -32602);
+    await createApproval;
+    const createApproved = await createPromise;
+    assert.equal(createApproved.result.isError, undefined);
+    assert.equal(fs.readFileSync(path.join(root, 'created-by-mcp.txt'), 'utf8'), 'created');
+
+    const writeApproval = approveNextMcp(true);
+    const writePromise = mcp.handleMessage({
+      jsonrpc: '2.0',
+      id: 7,
+      method: 'tools/call',
+      params: {
+        name: 'files_write',
+        arguments: { path: 'hello.txt', content: 'changed after human approval', approved: true },
+        _meta: { 'io.modelcontextprotocol/protocolVersion': MODERN },
+      },
+    }, token);
+    await writeApproval;
+    const writeApproved = await writePromise;
+    assert.equal(writeApproved.result.isError, undefined);
+    assert.equal(fs.readFileSync(sourcePath, 'utf8'), 'changed after human approval');
+
+    const terminalApproval = approveNextMcp(false);
+    const terminalPromise = mcp.handleMessage({
+      jsonrpc: '2.0',
+      id: 8,
+      method: 'tools/call',
+      params: {
+        name: 'terminal_execute',
+        arguments: { command: 'npm', args: ['--version'], approved: true },
+        _meta: { 'io.modelcontextprotocol/protocolVersion': MODERN },
+      },
+    }, token);
+    await terminalApproval;
+    const terminalRejected = await terminalPromise;
+    assert.equal(terminalRejected.result.isError, true);
+    const terminalRejectedData = JSON.parse(terminalRejected.result.content[0].text);
+    assert.equal(terminalRejectedData.error.code, 'APPROVAL_REQUIRED');
+
+    const terminalAcceptedApproval = approveNextMcp(true);
+    const terminalAcceptedPromise = mcp.handleMessage({
+      jsonrpc: '2.0',
+      id: 9,
+      method: 'tools/call',
+      params: {
+        name: 'terminal_execute',
+        arguments: { command: 'npm', args: ['--version'], approved: true },
+        _meta: { 'io.modelcontextprotocol/protocolVersion': MODERN },
+      },
+    }, token);
+    await terminalAcceptedApproval;
+    const terminalAccepted = await terminalAcceptedPromise;
+    assert.equal(terminalAccepted.result.isError, undefined);
+    const terminalData = JSON.parse(terminalAccepted.result.content[0].text);
+    assert.equal(terminalData.data.success, true);
+    assert.equal(terminalData.data.command, 'npm');
+    assert.equal(terminalData.data.workingDirectory, root);
+
+    fs.writeFileSync(path.join(root, 'delete-me.txt'), 'temporary', 'utf8');
+    const deleteApproval = approveNextMcp(true);
+    const deletePromise = mcp.handleMessage({
+      jsonrpc: '2.0',
+      id: 10,
+      method: 'tools/call',
+      params: {
+        name: 'files_delete',
+        arguments: { path: 'delete-me.txt', approved: true },
+        _meta: { 'io.modelcontextprotocol/protocolVersion': MODERN },
+      },
+    }, token);
+    await deleteApproval;
+    const deleted = await deletePromise;
+    assert.equal(deleted.result.isError, undefined);
+    const deletedData = JSON.parse(deleted.result.content[0].text);
+    assert.equal(deletedData.data.path, 'delete-me.txt');
+    assert.equal(fs.existsSync(path.join(root, 'delete-me.txt')), false);
 
     await agent.start();
 
@@ -162,7 +253,7 @@ async function main(): Promise<void> {
     }, modernHeaders);
     assert.equal(discoverHttp.status, 200);
     assert.ok(discoverHttp.body.result.supportedVersions.includes(MODERN));
-    assert.equal(discoverHttp.body._meta['io.modelcontextprotocol/serverInfo'].version, '3.10.8');
+    assert.equal(discoverHttp.body._meta['io.modelcontextprotocol/serverInfo'].version, '3.10.9');
 
     const listHttp = await httpRequest({
       jsonrpc: '2.0',
@@ -185,7 +276,7 @@ async function main(): Promise<void> {
     }, { ...modernHeaders, 'mcp-method': 'tools/call', 'mcp-name': 'files_read' });
     assert.equal(callHttp.status, 200);
     const httpReadData = JSON.parse(callHttp.body.result.content[0].text);
-    assert.equal(httpReadData.data.content, original);
+    assert.equal(httpReadData.data.content, 'changed after human approval');
 
     const mismatch = await httpRequest({
       jsonrpc: '2.0',

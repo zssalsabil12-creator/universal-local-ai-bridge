@@ -164,9 +164,32 @@ function buildAssistantTextScript() {
     }
     const visible = n => { if (!n || !n.isConnected || !n.innerText) return false; const s=getComputedStyle(n); return s.display!=='none'&&s.visibility!=='hidden'&&s.opacity!=='0'&&n.getClientRects().length>0; };
     const query = selectors => Array.from(new Set(roots.flatMap(root => selectors.flatMap(selector => { try { return Array.from(root.querySelectorAll(selector)); } catch { return []; } }))));
-    const semantic = query(SELECTORS.slice(0,7)).filter(visible).filter(n => n.innerText.trim());
-    const fallback = query(SELECTORS.slice(7)).filter(visible).filter(n => n.innerText.trim());
-    const candidates = semantic.length ? semantic : fallback;
+    const metaOf = node => [
+      node?.getAttribute?.('data-message-author-role'),
+      node?.getAttribute?.('data-role'),
+      node?.getAttribute?.('data-author'),
+      node?.getAttribute?.('aria-label'),
+      node?.getAttribute?.('class'),
+      node?.getAttribute?.('id')
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    const semantic = query(SELECTORS.slice(0,7))
+      .filter(visible)
+      .filter(n => n.innerText.trim())
+      .filter(n => !/user|human|system/.test(metaOf(n)));
+
+    const fallback = query(SELECTORS.slice(7))
+      .filter(visible)
+      .filter(n => n.innerText.trim())
+      .filter(n => !/user|human|system/.test(metaOf(n)));
+
+    // Remove nested generic containers so one assistant turn is not counted
+    // several times when a provider wraps its message in multiple articles.
+    const dedupeNested = candidates => candidates.filter((node, index, all) => {
+      return !all.some((other, j) => j !== index && node.parentElement && other.contains(node));
+    });
+
+    const candidates = dedupeNested(semantic.length ? semantic : fallback);
     let latest = null;
     for (const node of candidates) {
       if (!latest) latest = node;
@@ -176,4 +199,298 @@ function buildAssistantTextScript() {
   })()`;
 }
 
-module.exports = { INPUT_SELECTORS, SEND_SELECTORS, ASSISTANT_SELECTORS, buildAIInteractionScript, buildAIProbeScript, buildAssistantTextScript, browserScript };
+function buildLatestUserTextScript() {
+  return `(() => {
+    const roots = [document];
+    for (let i = 0; i < roots.length; i++) {
+      try {
+        const all = roots[i].querySelectorAll('*');
+        for (let j = 0; j < all.length; j++) {
+          if (all[j].shadowRoot && !roots.includes(all[j].shadowRoot)) roots.push(all[j].shadowRoot);
+        }
+      } catch {}
+    }
+
+    const collect = selectors => {
+      const out = [];
+      for (const root of roots) {
+        for (const selector of selectors) {
+          try { out.push(...root.querySelectorAll(selector)); } catch {}
+        }
+      }
+      return Array.from(new Set(out));
+    };
+
+    const textOf = node => String(node?.innerText || node?.textContent || '').trim();
+    const metaOf = node => [
+      node?.getAttribute?.('data-message-author-role'),
+      node?.getAttribute?.('data-role'),
+      node?.getAttribute?.('data-author'),
+      node?.getAttribute?.('aria-label'),
+      node?.getAttribute?.('class'),
+      node?.getAttribute?.('id')
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    const explicitUsers = collect([
+      '[data-message-author-role="user"]',
+      '[data-role="user"]',
+      '[data-author="user"]',
+      '[aria-label*="user message" i]',
+      '[aria-label*="human message" i]',
+      '[class*="user-message" i]',
+      '[class*="message-user" i]',
+      '[data-testid*="user-message" i]'
+    ]).filter(node => {
+      const text = textOf(node);
+      const meta = metaOf(node);
+      return text && text.length <= 20000 && !/assistant|system/.test(meta);
+    });
+
+    const assistantNodes = collect([
+      '[data-message-author-role="assistant"]',
+      '[data-role="assistant"]',
+      '[data-author="assistant"]',
+      '[aria-label*="assistant" i]',
+      '[class*="assistant-message" i]',
+      '[class*="message-assistant" i]',
+      '[data-testid*="assistant" i]'
+    ]);
+
+    // Fallback for providers that expose generic conversation articles without
+    // a user/assistant role attribute. Prefer the latest generic article that
+    // is not inside or marked as an assistant node.
+    let fallback = collect([
+      'main article',
+      'main [role="article"]',
+      '[role="article"]'
+    ]).filter(node => {
+      const text = textOf(node);
+      const meta = metaOf(node);
+      if (!text || text.length > 20000) return false;
+      if (/assistant|system/.test(meta)) return false;
+      return true;
+    });
+
+    // Remove nested duplicates: when both a wrapper and its child are matched,
+    // keep the outermost conversation item unless the child has explicit user metadata.
+    fallback = fallback.filter((node, index, all) => {
+      if (/user|human/.test(metaOf(node))) return true;
+      return !all.some((other, j) => j !== index && node.parentElement && other.contains(node));
+    });
+
+    const pickLatest = candidates => {
+      let latest = null;
+      for (const node of candidates) {
+        if (!latest || (latest.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+          latest = node;
+        }
+      }
+      return latest;
+    };
+
+    const explicitLatest = pickLatest(explicitUsers);
+    if (explicitLatest) return textOf(explicitLatest);
+
+    // Generic fallback: if the latest conversation item is not an assistant
+    // item, treat it as the latest human turn.
+    const latestAssistant = pickLatest(assistantNodes);
+    const latestGeneric = pickLatest(fallback);
+    if (latestGeneric) {
+      const genericText = textOf(latestGeneric);
+      const genericMeta = metaOf(latestGeneric);
+      const isAssistant = /assistant/.test(genericMeta) || (
+        latestAssistant &&
+        (latestAssistant === latestGeneric || latestAssistant.contains(latestGeneric) || latestGeneric.contains(latestAssistant))
+      );
+      if (!isAssistant && genericText) return genericText;
+    }
+
+    return '';
+  })()`;
+}
+
+function buildHideULABControlScript() {
+  return `(() => {
+    const markers = ['ULAB BRIDGE BOOTSTRAP','ULAB ACTIVE WORK TASK','ULAB TOOL RESULT','ULAB EXECUTION RECOVERY'];
+    const normalize = value => String(value || '').replace(/\\s+/g, ' ').trim();
+    const roots = [document];
+    for (let i = 0; i < roots.length; i++) {
+      try {
+        const all = roots[i].querySelectorAll('*');
+        for (let j = 0; j < all.length; j++) {
+          if (all[j].shadowRoot && !roots.includes(all[j].shadowRoot)) roots.push(all[j].shadowRoot);
+        }
+      } catch {}
+    }
+    const nodes = [];
+    for (const root of roots) {
+      try {
+        nodes.push(...root.querySelectorAll('[data-message-author-role="user"], [data-role="user"], [data-author="user"], [role="user"], main article, [role="article"]'));
+      } catch {}
+    }
+    for (const node of Array.from(new Set(nodes))) {
+      const text = normalize(node.innerText || node.textContent);
+      const marked = markers.some(marker => text.startsWith(marker));
+      if (!marked) continue;
+      try {
+        node.style.setProperty('display', 'none', 'important');
+        node.setAttribute('data-ulab-control', 'true');
+      } catch {}
+    }
+    return { ok:true };
+  })()`;
+}
+
+function buildHideULABToolCallScript() {
+  return `(() => {
+    const allowedActions = new Set(['files.read','files.list','files.search','files.propose','files.create','files.write','files.delete','git.status','git.diff','git.commit','git.push','terminal.execute','testing.run','context.build','audit.log','workspace.session']);
+    const roots = [document];
+    for (let i = 0; i < roots.length; i++) {
+      try { roots[i].querySelectorAll('*').forEach(node => { if (node.shadowRoot && !roots.includes(node.shadowRoot)) roots.push(node.shadowRoot); }); } catch {}
+    }
+    const nodes = [];
+    for (const root of roots) {
+      try { nodes.push(...root.querySelectorAll('pre, pre code, [data-language], [data-code-language]')); } catch {}
+    }
+    for (const node of Array.from(new Set(nodes))) {
+      const raw = String(node.textContent || node.innerText || '').trim();
+      let parsed = null;
+      try { parsed = JSON.parse(raw); } catch {}
+      const action = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed.action : null;
+      if (!allowedActions.has(action)) continue;
+      let current = node;
+      for (let depth = 0; current && depth < 10; depth++, current = current.parentElement) {
+        const meta = [current.getAttribute?.('data-message-author-role'), current.getAttribute?.('data-role'), current.getAttribute?.('role'), current.getAttribute?.('class'), current.getAttribute?.('aria-label')].filter(Boolean).join(' ').toLowerCase();
+        if (/assistant|response/.test(meta)) {
+          try { current.style.setProperty('display', 'none', 'important'); current.setAttribute('data-ulab-tool-call', 'true'); } catch {}
+          break;
+        }
+      }
+    }
+    return { ok:true };
+  })()`;
+}
+
+function buildHideULABAssistantRequestScript() {
+  return `(() => {
+    const allowedActions = new Set(['files.read','files.list','files.search','files.propose','files.create','files.write','files.delete','git.status','git.diff','git.commit','git.push','terminal.execute','testing.run','context.build','audit.log','workspace.session']);
+    const roots = [document];
+    for (let i = 0; i < roots.length; i++) {
+      try { roots[i].querySelectorAll('*').forEach(node => { if (node.shadowRoot && !roots.includes(node.shadowRoot)) roots.push(node.shadowRoot); }); } catch {}
+    }
+    const selectors = ['[data-message-author-role="assistant"]','[data-role="assistant"]','[data-author="assistant"]','[role="assistant"]','[aria-label*="assistant" i]','[data-testid*="assistant" i]','main article','main [role="article"]'];
+    const nodes = [];
+    for (const root of roots) {
+      for (const selector of selectors) {
+        try { nodes.push(...root.querySelectorAll(selector)); } catch {}
+      }
+    }
+    const parseCandidate = raw => {
+      try {
+        const parsed = JSON.parse(String(raw || '').trim());
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) && allowedActions.has(parsed.action) ? parsed : null;
+      } catch { return null; }
+    };
+    for (const node of Array.from(new Set(nodes)).reverse()) {
+      const text = String(node.innerText || node.textContent || '').trim();
+      if (!text || text.length > 65536) continue;
+      let tool = parseCandidate(text);
+      if (!tool) {
+        const fenceMark = String.fromCharCode(96).repeat(3);
+        const match = text.match(new RegExp(fenceMark + '(?:ulab-tool|json)?\\\\s*([\\\\s\\\\S]*?)' + fenceMark, 'i'));
+        if (match) tool = parseCandidate(match[1]);
+      }
+      if (!tool) continue;
+      try { node.style.setProperty('display','none','important'); node.setAttribute('data-ulab-tool-call','true'); } catch {}
+      return { ok:true, hidden:true, action:tool.action };
+    }
+    return { ok:true, hidden:false };
+  })()`;
+}
+
+function buildLatestAIToolBlockScript() {
+  const selectors = JSON.stringify(ASSISTANT_SELECTORS);
+  return `(() => {
+    const SELECTORS = ${selectors};
+    const roots = [document];
+    for (let i = 0; i < roots.length; i++) {
+      try {
+        const all = roots[i].querySelectorAll('*');
+        for (let j = 0; j < all.length; j++) {
+          if (all[j].shadowRoot && !roots.includes(all[j].shadowRoot)) roots.push(all[j].shadowRoot);
+        }
+      } catch {}
+    }
+
+    const query = selectors => {
+      const out = [];
+      for (let r = 0; r < roots.length; r++) {
+        for (let s = 0; s < selectors.length; s++) {
+          try {
+            const nodes = roots[r].querySelectorAll(selectors[s]);
+            for (let i = 0; i < nodes.length; i++) out.push(nodes[i]);
+          } catch {}
+        }
+      }
+      return out;
+    };
+
+    const allowedActions = new Set([
+      'files.read','files.list','files.search','files.propose',
+      'files.create','files.write','files.delete','git.status','git.diff','git.commit','git.push',
+      'terminal.execute','testing.run','context.build','audit.log','workspace.session'
+    ]);
+    const fenceMark = String.fromCharCode(96).repeat(3);
+    const fence = fenceMark + 'ulab-tool\\n';
+
+    // Search all rendered code blocks, then choose the latest valid ULAB request.
+    // Some providers do not place the <pre> inside the semantic assistant node.
+    const blocks = query(['pre', 'pre code', '[data-language]', '[data-code-language]']);
+    const isAssistantBlock = node => {
+      let current = node;
+      for (let depth = 0; current && depth < 12; depth++, current = current.parentElement) {
+        const attrs = [
+          current.getAttribute && current.getAttribute('data-message-author-role'),
+          current.getAttribute && current.getAttribute('data-role'),
+          current.getAttribute && current.getAttribute('role'),
+          current.getAttribute && current.getAttribute('aria-label'),
+          current.getAttribute && current.getAttribute('class'),
+          current.getAttribute && current.getAttribute('id')
+        ].filter(Boolean).join(' ').toLowerCase();
+        if (/assistant|assistant-message|assistant-response|response-container/.test(attrs)) return true;
+        if (/user-message|message-author-user|role user/.test(attrs)) return false;
+      }
+      return false;
+    };
+    for (let i = blocks.length - 1; i >= 0; i--) {
+      const block = blocks[i];
+      if (!isAssistantBlock(block)) continue;
+      const raw = String(block.textContent || block.innerText || '').trim();
+      if (!raw || raw.length > 65536) continue;
+
+      const p1 = block.parentElement;
+      const p2 = p1 && p1.parentElement;
+      const marker = [
+        block.getAttribute('class'),
+        block.getAttribute('data-language'),
+        block.getAttribute('data-code-language'),
+        block.getAttribute('aria-label'),
+        block.getAttribute('title'),
+        p1 ? String(p1.innerText || '') : '',
+        p2 ? String(p2.innerText || '') : ''
+      ].filter(Boolean).join(' ');
+
+      let parsed = null;
+      try { parsed = JSON.parse(raw); } catch {}
+      const structured = !!parsed && typeof parsed === 'object' && !Array.isArray(parsed) &&
+        allowedActions.has(parsed.action) &&
+        (parsed.params === undefined || (parsed.params && typeof parsed.params === 'object' && !Array.isArray(parsed.params)));
+      if (!structured && !/ulab[-\\s]?tool/i.test(marker)) continue;
+
+      return fence + raw + '\\n' + fenceMark;
+    }
+    return '';
+  })()`;
+}
+
+module.exports = { INPUT_SELECTORS, SEND_SELECTORS, ASSISTANT_SELECTORS, buildAIInteractionScript, buildAIProbeScript, buildAssistantTextScript, buildLatestUserTextScript, buildLatestAIToolBlockScript, buildHideULABControlScript, buildHideULABToolCallScript, buildHideULABAssistantRequestScript, browserScript };

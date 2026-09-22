@@ -16,6 +16,14 @@ contextBridge.exposeInMainWorld('ulabDesktop', {
   aiReject: (approvalId) => ipcRenderer.invoke('ai-reject', { approvalId }),
   sendAIText: (text) => ipcRenderer.invoke('ai-send-text', text),
   sendAIContext: (payload) => ipcRenderer.invoke('ai-send-context', payload),
+  previewStart: () => ipcRenderer.invoke('preview-start'),
+  previewStop: () => ipcRenderer.invoke('preview-stop'),
+  previewStatus: () => ipcRenderer.invoke('preview-status'),
+  onPreviewStatus: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('preview-status', handler);
+    return () => ipcRenderer.removeListener('preview-status', handler);
+  },
   onAIApprovalRequest: (callback) => {
     const handler = (_event, data) => callback(data);
     ipcRenderer.on('ai-approval-request', handler);

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Pin, FileCode, Folder, Search, Filter, Circle, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { ProjectIndex, FileNode } from '../utils/fileSystem';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface ContextBuilderProps {
   projectIndex: ProjectIndex | null;
@@ -22,6 +23,8 @@ export default function ContextBuilder({
   onTogglePin,
   onToggleExclude,
 }: ContextBuilderProps) {
+  const { language } = useLanguage();
+  const ui = (ar: string, en: string) => language === 'en' ? en : ar;
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'selected' | 'pinned' | 'excluded'>('all');
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
@@ -143,7 +146,7 @@ export default function ContextBuilder({
       <div className="p-3 border-b border-[#2a2a3a]">
         <div className="flex items-center gap-2 mb-2">
           <Search className="w-4 h-4 text-indigo-400" />
-          <span className="text-sm font-bold">بناء السياق</span>
+          <span className="text-sm font-bold">{ui('بناء السياق','Context builder')}</span>
         </div>
         
         {/* Search */}
@@ -152,7 +155,7 @@ export default function ContextBuilder({
           <input
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="بحث في الملفات..."
+            placeholder={ui('بحث في الملفات...','Search files...')}
             className="w-full pr-7 pl-2 py-1.5 rounded bg-[#0a0a0f] border border-[#2a2a3a] text-xs text-white placeholder:text-[#64748b] focus:border-indigo-500/50 focus:outline-none"
             dir="auto"
           />
@@ -170,10 +173,10 @@ export default function ContextBuilder({
                   : 'bg-[#252530] text-[#94a3b8] hover:bg-[#2a2a3a]'
               }`}
             >
-              {type === 'all' ? 'الكل' :
-               type === 'selected' ? `محدد (${selectedFiles.length})` :
-               type === 'pinned' ? `مثبت (${pinnedFiles.length})` :
-               `مستبعد (${excludedPaths.length})`}
+              {type === 'all' ? ui('الكل','All') :
+               type === 'selected' ? ui(`محدد (${selectedFiles.length})`,`Selected (${selectedFiles.length})`) :
+               type === 'pinned' ? ui(`مثبت (${pinnedFiles.length})`,`Pinned (${pinnedFiles.length})`) :
+               ui(`مستبعد (${excludedPaths.length})`,`Excluded (${excludedPaths.length})`)}
             </button>
           ))}
         </div>
@@ -183,15 +186,15 @@ export default function ContextBuilder({
       <div className="p-2 border-b border-[#2a2a3a] grid grid-cols-3 gap-2 text-center">
         <div>
           <p className="text-sm font-bold text-indigo-400">{selectedFiles.length}</p>
-          <p className="text-[8px] text-[#64748b]">محدد</p>
+          <p className="text-[8px] text-[#64748b]">{ui('محدد','Selected')}</p>
         </div>
         <div>
           <p className="text-sm font-bold text-yellow-400">{pinnedFiles.length}</p>
-          <p className="text-[8px] text-[#64748b]">مثبت</p>
+          <p className="text-[8px] text-[#64748b]">{ui('مثبت','Pinned')}</p>
         </div>
         <div>
           <p className="text-sm font-bold text-red-400">{excludedPaths.length}</p>
-          <p className="text-[8px] text-[#64748b]">مستبعد</p>
+          <p className="text-[8px] text-[#64748b]">{ui('مستبعد','Excluded')}</p>
         </div>
       </div>
 
@@ -200,7 +203,7 @@ export default function ContextBuilder({
         {!projectIndex ? (
           <div className="text-center py-8">
             <Folder className="w-10 h-10 text-[#2a2a3a] mx-auto mb-3" />
-            <p className="text-xs text-[#94a3b8]">افتح مشروعًا أولاً</p>
+            <p className="text-xs text-[#94a3b8]">{ui('افتح مشروعًا أولاً','Open a project first')}</p>
           </div>
         ) : filterType === 'all' ? (
           <div>
@@ -209,7 +212,7 @@ export default function ContextBuilder({
         ) : (
           <div className="space-y-1">
             {filteredFiles.length === 0 ? (
-              <p className="text-center py-8 text-xs text-[#64748b]">لا توجد ملفات</p>
+              <p className="text-center py-8 text-xs text-[#64748b]">{ui('لا توجد ملفات','No files')}</p>
             ) : (
               filteredFiles.map(file => {
                 const status = getFileStatus(file.path);
@@ -264,9 +267,9 @@ export default function ContextBuilder({
 
       {/* Help */}
       <div className="p-2 border-t border-[#2a2a3a] text-[9px] text-[#64748b] space-y-0.5">
-        <p>تحديد: يُرسل عند الطلب</p>
-        <p>تثبيت: يُرسل دائماً</p>
-        <p>استبعاد: يُتجاهل دائماً</p>
+        <p>{ui('تحديد: يُرسل عند الطلب','Select: sent on request')}</p>
+        <p>{ui('تثبيت: يُرسل دائماً','Pin: always included')}</p>
+        <p>{ui('استبعاد: يُتجاهل دائماً','Exclude: always ignored')}</p>
       </div>
     </div>
   );

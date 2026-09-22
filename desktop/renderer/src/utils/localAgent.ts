@@ -44,6 +44,12 @@ export interface AgentMessage {
   timestamp: number;
 }
 
+export interface AgentEvent {
+  type: 'event';
+  event: string;
+  [key: string]: unknown;
+}
+
 export interface HealthCheckResult {
   online: boolean;
   version?: string;
@@ -73,6 +79,7 @@ export class LocalAgentManager {
   private defaultTimeoutMs = 8000;
   private capabilities: AgentCapabilities = { fileSystem:false, git:false, terminal:false, notifications:true };
   private pendingRequests = new Map<string,{resolve:(res:WebRpcResponse)=>void; timer:ReturnType<typeof setTimeout>}>();
+  private eventListeners = new Set<(event: AgentEvent) => void>();
   private statusListeners = new Set<(status: ConnectionStatus)=>void>();
   private connectionListeners = new Set<(connection: AgentConnection)=>void>();
   private sessionListeners = new Set<(session: WorkspaceSession|null)=>void>();
@@ -87,6 +94,8 @@ export class LocalAgentManager {
   public onStatusChange(fn:(s:ConnectionStatus)=>void){this.statusListeners.add(fn);return()=>{this.statusListeners.delete(fn);};}
   public onConnectionChange(fn:(c:AgentConnection)=>void){this.connectionListeners.add(fn);return()=>{this.connectionListeners.delete(fn);};}
   public onSessionChange(fn:(s:WorkspaceSession|null)=>void){this.sessionListeners.add(fn);return()=>{this.sessionListeners.delete(fn);};}
+  public onEvent(fn:(event:AgentEvent)=>void){this.eventListeners.add(fn);return()=>{this.eventListeners.delete(fn);};}
+  public onMcpApprovalRequest(fn:(event:AgentEvent)=>void){return this.onEvent(event=>{if(event.event==='mcp-approval-request')fn(event);});}
   private notify(){this.statusListeners.forEach(fn=>fn(this.status));const c=this.getConnection();this.connectionListeners.forEach(fn=>fn(c));}
   private notifySession(){this.sessionListeners.forEach(fn=>fn(this.currentSession));this.notify();}
 
@@ -111,7 +120,7 @@ export class LocalAgentManager {
     });
   }
 
-  private handleMessage(raw:string){try{const data:WebRpcResponse=JSON.parse(raw);if(!data?.requestId)return;const pending=this.pendingRequests.get(data.requestId);if(!pending)return;clearTimeout(pending.timer);this.pendingRequests.delete(data.requestId);if(!data.success&&data.error&&(data.error.code==='SESSION_STALE'||data.error.code==='SESSION_EXPIRED')){this.currentSession=null;this.notifySession();}pending.resolve(data);}catch(e){console.error('ULAB agent message error',e);}}
+  private handleMessage(raw:string){try{const data=JSON.parse(raw);if(data?.type==='event'){this.eventListeners.forEach(fn=>{try{fn(data as AgentEvent);}catch(e){console.error('ULAB agent event listener error',e);}});return;}if(!data?.requestId)return;const pending=this.pendingRequests.get(data.requestId);if(!pending)return;clearTimeout(pending.timer);this.pendingRequests.delete(data.requestId);if(!data.success&&data.error&&(data.error.code==='SESSION_STALE'||data.error.code==='SESSION_EXPIRED')){this.currentSession=null;this.notifySession();}pending.resolve(data as WebRpcResponse);}catch(e){console.error('ULAB agent message error',e);}}
   private failPending(code:string,message:string){for(const [id,p] of this.pendingRequests){clearTimeout(p.timer);p.resolve({requestId:id,success:false,error:{code:code as ErrorCode,message,requestId:id}});}this.pendingRequests.clear();}
   public disconnect(notify=true){if(this.ws){try{this.ws.close();}catch{}this.ws=null;}this.status='disconnected';this.currentSession=null;this.failPending('AGENT_OFFLINE','Client disconnected from local agent');if(notify)this.notifySession();}
   private requestId(){return `req-${Date.now()}-${Math.random().toString(36).slice(2,9)}`;}
@@ -130,6 +139,8 @@ export class LocalAgentManager {
   public proposeChange(path:string,content:string,reason='User proposed update'){return this.sendRequest<ProposedChange>('files.propose',{path,content,reason});}
   public approveChange(changeId:string){return this.sendRequest('files.approve',{changeId});}
   public rejectChange(changeId:string){return this.sendRequest('files.reject',{changeId});}
+  public approveMcpRequest(approvalId:string){return this.sendRequest('mcp.approve',{approvalId});}
+  public rejectMcpRequest(approvalId:string){return this.sendRequest('mcp.reject',{approvalId});}
   public writeFile(path:string,content:string,approved=false){return this.sendRequest('files.write',{path,content,approved});}
   public deleteFile(path:string,approved=false){return this.sendRequest('files.delete',{path,approved});}
   public executeTerminal(command:string,args:string[]=[],approved=false){return this.sendRequest<ExecutionResult>('terminal.execute',{command,args,approved});}

@@ -3,7 +3,7 @@ import type { LocalAgentServer } from './LocalAgentServer';
 
 const PROTOCOL_MODERN = '2026-07-28';
 const PROTOCOL_LEGACY = '2025-11-25';
-const ULAB_VERSION = '3.10.8';
+const ULAB_VERSION = '3.10.9';
 const MAX_BODY_BYTES = 1024 * 1024;
 
 export interface MCPToolDefinition {
@@ -18,8 +18,15 @@ const TOOL_ACTIONS: Record<string, string> = {
   files_read: 'files.read',
   files_search: 'files.search',
   files_propose: 'files.propose',
+  files_create: 'files.create',
+  files_write: 'files.write',
+  files_delete: 'files.delete',
   git_status: 'git.status',
   git_diff: 'git.diff',
+  git_commit: 'git.commit',
+  git_push: 'git.push',
+  terminal_execute: 'terminal.execute',
+  testing_run: 'testing.run',
   context_build: 'context.build',
   audit_log: 'audit.log',
 };
@@ -82,6 +89,46 @@ const TOOLS: MCPToolDefinition[] = [
     },
   },
   {
+    name: 'files_create',
+    description: 'Create a new file inside the active ULAB workspace. The operation is blocked until the ULAB human-approval flow authorizes it.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Workspace-relative path for the new file.' },
+        content: { type: 'string', description: 'Initial complete file content.' },
+      },
+      required: ['path', 'content'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'files_write',
+    description: 'Request a complete file write inside the active workspace. ULAB requires explicit human approval before applying the mutation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Workspace-relative target path.' },
+        content: { type: 'string', description: 'Complete replacement file content.' },
+        approved: { type: 'boolean', description: 'Only ULAB may authorize this after human approval; AI clients should normally omit this.' },
+      },
+      required: ['path', 'content'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'files_delete',
+    description: 'Request deletion of a workspace file. ULAB requires explicit human approval before applying the mutation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Workspace-relative target file path.' },
+        approved: { type: 'boolean', description: 'Only ULAB may authorize this after human approval; AI clients should normally omit this.' },
+      },
+      required: ['path'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'git_status',
     description: 'Get Git status for the active workspace.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
@@ -93,6 +140,57 @@ const TOOLS: MCPToolDefinition[] = [
       type: 'object',
       properties: {
         staged: { type: 'boolean', description: 'Show staged diff when true.' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'git_commit',
+    description: 'Request a Git commit in the active workspace. ULAB requires explicit human approval.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', description: 'Commit message.' },
+        approved: { type: 'boolean', description: 'Only ULAB may authorize this after human approval.' },
+      },
+      required: ['message'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'git_push',
+    description: 'Request a Git push from the active workspace. ULAB requires explicit human approval.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        remote: { type: 'string', description: 'Optional Git remote.' },
+        branch: { type: 'string', description: 'Optional Git branch.' },
+        approved: { type: 'boolean', description: 'Only ULAB may authorize this after human approval.' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'terminal_execute',
+    description: 'Execute a command with the active workspace as the working directory. ULAB applies command safety rules and asks for human approval when required.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        command: { type: 'string', description: 'Executable command such as npm, node, git, or a package-manager binary.' },
+        args: { type: 'array', items: { type: 'string' }, description: 'Command arguments.' },
+        approved: { type: 'boolean', description: 'Only ULAB may authorize this after human approval.' },
+      },
+      required: ['command'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'testing_run',
+    description: 'Run the workspace-detected test suite through ULAB. Approval may be required by the workspace terminal policy.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        approved: { type: 'boolean', description: 'Only ULAB may authorize this after human approval.' },
       },
       additionalProperties: false,
     },
@@ -158,7 +256,7 @@ export class ULABMCPServer {
       return jsonrpcResult(id, {
         supportedVersions: [PROTOCOL_MODERN, PROTOCOL_LEGACY],
         capabilities: { tools: { listChanged: false } },
-        instructions: 'ULAB exposes workspace-scoped tools. Files are sandboxed to the selected workspace. Use files_propose for changes; direct write, delete, terminal and Git mutation operations remain outside the MCP tool surface.',
+        instructions: 'ULAB exposes workspace-scoped tools. Files are sandboxed to the selected workspace. Use files_propose for reviewed changes or files_create for creating a new file; sensitive mutations remain subject to the ULAB human-approval flow.',
       }, {
         'io.modelcontextprotocol/serverInfo': { name: 'ulab-local-agent', version: ULAB_VERSION },
       });
@@ -169,7 +267,7 @@ export class ULABMCPServer {
         protocolVersion: PROTOCOL_LEGACY,
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: 'ulab-local-agent', version: ULAB_VERSION },
-        instructions: 'ULAB exposes workspace-scoped tools. Use files_propose for changes; direct writes require the ULAB approval flow.',
+        instructions: 'ULAB exposes workspace-scoped tools. Use files_propose for reviewed changes or files_create for a new file; all sensitive mutations require the ULAB human-approval flow.',
       });
     }
 
@@ -207,6 +305,7 @@ export class ULABMCPServer {
         requestId,
         action,
         token,
+        source: 'mcp',
         params: args || {},
       }, clientId);
 

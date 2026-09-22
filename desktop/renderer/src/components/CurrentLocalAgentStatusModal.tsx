@@ -3,6 +3,7 @@ import {
   Server, Wifi, WifiOff, RefreshCw, Folder, Shield, X, CheckCircle2
 } from 'lucide-react';
 import { localAgent, useAgentConnection } from '../utils/localAgent';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface CurrentLocalAgentStatusModalProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ export default function CurrentLocalAgentStatusModal({
   isOpen,
   onClose,
 }: CurrentLocalAgentStatusModalProps) {
+  const { language } = useLanguage();
+  const ui = (ar: string, en: string) => language === 'en' ? en : ar;
   const connection = useAgentConnection();
   const [health, setHealth] = useState<any>(null);
   const [busy, setBusy] = useState(false);
@@ -52,18 +55,18 @@ export default function CurrentLocalAgentStatusModal({
               <p className="text-[10px] text-[#71809f]">Managed automatically by ULAB Desktop</p>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-[#71809f] hover:bg-white/[0.05] hover:text-white" aria-label="إغلاق">
+          <button onClick={onClose} className="rounded-lg p-1.5 text-[#71809f] hover:bg-white/[0.05] hover:text-white" aria-label={ui('إغلاق','Close')}>
             <X className="h-4 w-4" />
           </button>
         </div>        <div className="space-y-3 p-5">
           <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold text-white">{connected ? 'متصل وجاهز' : 'غير متصل'}</p>
+                <p className="text-xs font-semibold text-white">{connected ? ui('متصل وجاهز','Connected and ready') : ui('غير متصل','Disconnected')}</p>
                 <p className="mt-1 text-[10px] text-[#71809f]">
                   {health?.data?.status === 'ok'
                     ? 'Agent v' + health.data.version + ' · localhost'
-                    : 'ULAB يتحقق من القناة المحلية تلقائيًا'}
+                    : ui('ULAB يتحقق من القناة المحلية تلقائيًا','ULAB checks the local channel automatically')}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -74,7 +77,7 @@ export default function CurrentLocalAgentStatusModal({
                   onClick={() => void refresh()}
                   disabled={busy}
                   className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-2 text-[#9badca] hover:bg-white/[0.06] disabled:opacity-40"
-                  title="إعادة الفحص"
+                  title={ui('إعادة الفحص','Refresh')}
                 >
                   <RefreshCw className={'h-3.5 w-3.5 ' + (busy ? 'animate-spin' : '')} />
                 </button>
@@ -88,14 +91,13 @@ export default function CurrentLocalAgentStatusModal({
               <p className="text-xs font-semibold text-cyan-100">Workspace Sandbox</p>
             </div>
             <p className="text-[10px] leading-relaxed text-[#8da0c0]">
-              كل عمليات الملفات والأوامر محصورة في مساحة العمل النشطة.
-              التعديلات والعمليات الحساسة تمر عبر موافقة بشرية داخل ULAB.
+              {ui('كل عمليات الملفات والأوامر محصورة في مساحة العمل النشطة. التعديلات والعمليات الحساسة تمر عبر موافقة بشرية داخل ULAB.','All file and command operations are scoped to the active workspace. Changes and sensitive operations require human approval in ULAB.')}
             </p>
           </div>          {session && (
             <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-4">
               <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-emerald-200">
                 <Folder className="h-4 w-4" />
-                مساحة العمل النشطة
+                {ui('مساحة العمل النشطة','Active workspace')}
               </div>
               <div className="rounded-lg border border-emerald-500/10 bg-black/20 p-2.5 font-mono text-[10px] text-emerald-300" dir="ltr">
                 {session.workspaceRoot}
@@ -111,14 +113,14 @@ export default function CurrentLocalAgentStatusModal({
 
           {!window.ulabDesktop?.isDesktop && (
             <p className="text-[9px] leading-relaxed text-[#667694]">
-              هذا الوضع يستخدم واجهة المتصفح فقط؛ نسخة سطح المكتب هي المسار الكامل للجسر المحلي.
+              {ui('هذا الوضع يستخدم واجهة المتصفح فقط؛ نسخة سطح المكتب هي المسار الكامل للجسر المحلي.','This mode uses the browser interface only; the desktop application provides the full local bridge.')}
             </p>
           )}
         </div>
 
         <div className="flex justify-end border-t border-white/[0.08] px-5 py-3">
           <button onClick={onClose} className="rounded-lg bg-white/[0.05] px-4 py-2 text-xs font-semibold text-white hover:bg-white/[0.08]">
-            إغلاق
+            {ui('إغلاق','Close')}
           </button>
         </div>
       </div>

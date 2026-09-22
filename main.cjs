@@ -8,11 +8,10 @@ const { shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
-const { spawn } = require('child_process');
 const WebSocket = require('ws');
 const { getAIToolDisposition, extractAIToolRequest, isTrustedAIUrl, createAIToolApprovalContext, validateAIToolApprovalContext, AI_APPROVAL_TTL_MS } = require('./aiBridgeSecurity.cjs');
 const { isUsableAIWebContents } = require('./aiBridgeRuntime.cjs');
-const { buildAIInteractionScript, buildAIProbeScript, buildAssistantTextScript, buildLatestUserTextScript, buildLatestAIToolBlockScript, buildHideULABControlScript, buildHideULABToolCallScript, buildHideULABAssistantRequestScript } = require('./aiBridgeDom.cjs');
+const { buildAIInteractionScript, buildAIProbeScript, buildAssistantTextScript, buildLatestUserTextScript, buildLatestAIToolBlockScript } = require('./aiBridgeDom.cjs');
 const { isLocalProjectWorkRequest } = require('./aiBridgeIntent.cjs');
 const { shouldRecoverBridgeControl: shouldRecoverBridgeControlFromModule } = require('./aiBridgeRecovery.cjs');
 let agentProcess = null;
@@ -22,11 +21,6 @@ let shuttingDown = false;
 let bridgeAgentSocket = null;
 let bridgeAgentConnecting = null;
 let aiBridgeState = 'IDLE';
-let previewProcess = null;
-let previewWorkspaceRoot = null;
-let previewUrl = null;
-let previewOutput = '';
-let previewStartPromise = null;
 
 function setAIBridgeState(state, detail = {}) {
   aiBridgeState = state;
@@ -158,26 +152,8 @@ async function startLocalAgent() {
   return agentStartInFlight;
 }
 
-function stopPreviewProcess() {
-  const proc = previewProcess;
-  previewProcess = null;
-  previewWorkspaceRoot = null;
-  previewUrl = null;
-  if (!proc) return;
-  try {
-    if (process.platform === 'win32' && proc.pid) {
-      const killer = spawn('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { windowsHide:true, stdio:'ignore' });
-      killer.once('error', () => { try { proc.kill(); } catch {} });
-    } else {
-      proc.kill('SIGTERM');
-    }
-  } catch { try { proc.kill(); } catch {} }
-  sendToRenderer('preview-status', { state:'stopped', url:null });
-}
-
 function stopLocalAgent() {
   shuttingDown = true;
-  stopPreviewProcess();
   closeAgentSocket();
   if (!agentProcess) return;
   try { agentProcess.kill(); } catch {}
@@ -308,13 +284,7 @@ async function sendTextToAI(text) {
       aiView.webContents.executeJavaScript(aiInjectionScript(text), true),
       new Promise(resolve => setTimeout(() => resolve({ ok:false, reason:'AI_SCRIPT_TIMEOUT', error:'AI page script timed out.' }), 12000))
     ]);
-    if (result?.ok) {
-      rememberInjectedUserMessage(text);
-      try {
-        await aiView.webContents.executeJavaScript(buildHideULABControlScript(), false);
-        await aiView.webContents.executeJavaScript(buildHideULABToolCallScript(), false);
-      } catch {}
-    }
+    if (result?.ok) rememberInjectedUserMessage(text);
     return result;
   } catch (error) {
     return { ok:false, reason:'AI_SCRIPT_ERROR', error:error.message };
@@ -571,7 +541,6 @@ async function processAIToolRequest(tool) {
   if (fingerprint === lastProcessedToolBlock) return;
   lastProcessedToolBlock = fingerprint;
   setAIBridgeState('ACTION_DETECTED', { action:tool.action, requestId:tool.id || fingerprint });
-  try { await aiView?.webContents.executeJavaScript(buildHideULABAssistantRequestScript(), false); } catch {}
 
   const disposition = getAIToolDisposition(tool.action);
   if (disposition === 'reject') {
@@ -1090,77 +1059,6 @@ ipcMain.handle('ai-status', async () => {
 });
 ipcMain.handle('ai-diagnostics', async () => diagnoseAIPage());
 ipcMain.handle('ai-send-text', async (_event, text) => ({ result: await sendTextToAI(String(text || '')) }));
-
-function parsePreviewUrl(text) {
-  const match = String(text || '').match(/https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?[^\s)<>"']*/i);
-  return match ? match[0].replace(/[.,;]+$/, '') : null;
-}
-
-async function startPreviewProcess() {
-  if (previewStartPromise) return previewStartPromise;
-  previewStartPromise = (async () => {
-    const status = await callAgent('workspace.session');
-    const workspaceRoot = status?.success ? status.data?.workspaceRoot : null;
-    if (!workspaceRoot) return { ok:false, error:'Select a workspace before starting Preview' };
-
-    if (previewProcess && previewWorkspaceRoot === workspaceRoot && previewUrl) {
-      return { ok:true, running:true, url:previewUrl, output:previewOutput };
-    }
-
-    stopPreviewProcess();
-    const packagePath = path.join(workspaceRoot, 'package.json');
-    let pkg = null;
-    try { pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8')); } catch {
-      return { ok:false, error:'No valid package.json was found in the active workspace' };
-    }
-    const scripts = pkg?.scripts || {};
-    const scriptName = ['dev', 'start', 'preview'].find(name => typeof scripts[name] === 'string');
-    if (!scriptName) {
-      return { ok:false, error:'No supported Preview script found. Add a package.json dev, start, or preview script.' };
-    }
-
-    previewWorkspaceRoot = workspaceRoot;
-    previewOutput = '';
-    previewUrl = null;
-    sendToRenderer('preview-status', { state:'starting', url:null, script:scriptName, output:'' });
-
-    const command = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-    const args = ['run', scriptName];
-    const env = { ...process.env, FORCE_COLOR:'0' };
-    previewProcess = spawn(command, args, { cwd:workspaceRoot, env, windowsHide:true, detached:false, shell:false, stdio:['ignore','pipe','pipe'] });
-
-    const onData = chunk => {
-      previewOutput = (previewOutput + String(chunk || '')).slice(-12000);
-      const detected = parsePreviewUrl(previewOutput);
-      if (detected && detected !== previewUrl) {
-        previewUrl = detected;
-        sendToRenderer('preview-status', { state:'running', url:previewUrl, script:scriptName, output:previewOutput });
-      } else {
-        sendToRenderer('preview-status', { state:'starting', url:previewUrl, script:scriptName, output:previewOutput });
-      }
-    };
-    previewProcess.stdout?.on('data', onData);
-    previewProcess.stderr?.on('data', onData);
-    previewProcess.once('error', error => {
-      sendToRenderer('preview-status', { state:'error', url:null, error:error.message, output:previewOutput });
-      previewProcess = null;
-    });
-    previewProcess.once('exit', (code, signal) => {
-      const wasCurrent = previewProcess;
-      previewProcess = null;
-      if (wasCurrent) sendToRenderer('preview-status', { state:'stopped', url:null, code, signal, output:previewOutput });
-    });
-
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    if (!previewProcess) return { ok:false, error:'Preview process exited during startup', output:previewOutput };
-    return { ok:true, running:true, url:previewUrl, script:scriptName, output:previewOutput };
-  })().finally(() => { previewStartPromise = null; });
-  return previewStartPromise;
-}
-
-ipcMain.handle('preview-start', () => startPreviewProcess());
-ipcMain.handle('preview-stop', () => { stopPreviewProcess(); return { ok:true }; });
-ipcMain.handle('preview-status', () => ({ state:previewProcess ? (previewUrl ? 'running' : 'starting') : 'stopped', url:previewUrl, workspaceRoot:previewWorkspaceRoot, output:previewOutput }));
 async function sendWhenAIReady(text, attempts = 8) {
   let lastResult = null;
   for (let i = 0; i < attempts; i++) {

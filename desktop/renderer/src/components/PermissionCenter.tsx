@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useLanguage } from '../i18n/LanguageContext';
 import {
   Shield, CheckCircle, AlertTriangle, XCircle, Lock, Unlock,
   Folder, FileCode, Terminal as TermIcon, GitBranch, Eye, Edit,
@@ -93,6 +94,8 @@ export function resolvePermission(
 }
 
 export default function PermissionCenter({ config, onUpdate }: PermissionCenterProps) {
+  const { language } = useLanguage();
+  const ui = (ar: string, en: string) => language === 'en' ? en : ar;
   const [isAddingRule, setIsAddingRule] = useState(false);
   const [newRule, setNewRule] = useState<Partial<PermissionRule>>({
     resource: '',
@@ -112,13 +115,13 @@ export default function PermissionCenter({ config, onUpdate }: PermissionCenterP
   };
 
   const permissionLabels: Record<string, string> = {
-    readFiles: 'قراءة الملفات',
-    writeFiles: 'كتابة الملفات',
-    deleteFiles: 'حذف الملفات',
-    runTerminal: 'تشغيل Terminal',
-    accessGit: 'الوصول لـ Git',
-    accessCredentials: 'الوصول للبيانات الحساسة',
-    accessSystemDirs: 'الوصول لمجلدات النظام',
+    readFiles: ui('قراءة الملفات', 'Read files'),
+    writeFiles: ui('كتابة الملفات', 'Write files'),
+    deleteFiles: ui('حذف الملفات', 'Delete files'),
+    runTerminal: ui('تشغيل Terminal', 'Run terminal'),
+    accessGit: ui('الوصول لـ Git', 'Git access'),
+    accessCredentials: ui('الوصول للبيانات الحساسة', 'Sensitive data access'),
+    accessSystemDirs: ui('الوصول لمجلدات النظام', 'System directory access'),
   };
 
   const levelColors: Record<PermissionLevel, string> = {
@@ -181,7 +184,7 @@ export default function PermissionCenter({ config, onUpdate }: PermissionCenterP
       {/* Header */}
       <div className="p-3 border-b border-[#2a2a3a] flex items-center gap-2">
         <Shield className="w-4 h-4 text-green-400" />
-        <span className="text-sm font-bold">مركز الصلاحيات</span>
+        <span className="text-sm font-bold">{ui('مركز الصلاحيات', 'Permission Center')}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
@@ -189,7 +192,7 @@ export default function PermissionCenter({ config, onUpdate }: PermissionCenterP
         <div>
           <h3 className="text-xs font-bold mb-2 flex items-center gap-1.5">
             <Lock className="w-3 h-3 text-indigo-400" />
-            الصلاحيات العامة
+            {ui('الصلاحيات العامة', 'Global permissions')}
           </h3>
           <div className="space-y-1.5">
             {Object.entries(config.globalPermissions).map(([key, level]) => {
@@ -210,7 +213,7 @@ export default function PermissionCenter({ config, onUpdate }: PermissionCenterP
                     className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] transition-colors ${levelColors[level]}`}
                   >
                     <LevelIcon className="w-3 h-3" />
-                    {level === 'allow' ? 'سماح' : level === 'ask' ? 'سؤال' : 'رفض'}
+                    {level === 'allow' ? ui('سماح', 'Allow') : level === 'ask' ? ui('سؤال', 'Ask') : ui('رفض', 'Deny')}
                   </button>
                 </div>
               );
@@ -223,7 +226,7 @@ export default function PermissionCenter({ config, onUpdate }: PermissionCenterP
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-bold flex items-center gap-1.5">
               <FileCode className="w-3 h-3 text-cyan-400" />
-              قواعد مخصصة
+              {ui('قواعد مخصصة', 'Custom rules')}
             </h3>
             <button
               onClick={() => setIsAddingRule(!isAddingRule)}
@@ -243,7 +246,7 @@ export default function PermissionCenter({ config, onUpdate }: PermissionCenterP
               <input
                 value={newRule.resource}
                 onChange={e => setNewRule({ ...newRule, resource: e.target.value })}
-                placeholder="المسار أو الأداة (مثل: src/secrets/*)"
+                placeholder={ui('المسار أو الأداة (مثل: src/secrets/*)', 'Path or tool (e.g. src/secrets/*)')}
                 className="w-full px-2 py-1.5 rounded bg-[#111118] border border-[#2a2a3a] text-xs text-white placeholder:text-[#64748b]"
                 dir="ltr"
               />
@@ -252,23 +255,23 @@ export default function PermissionCenter({ config, onUpdate }: PermissionCenterP
                 onChange={e => setNewRule({ ...newRule, type: e.target.value as any })}
                 className="w-full px-2 py-1.5 rounded bg-[#111118] border border-[#2a2a3a] text-xs text-white"
               >
-                <option value="path">مسار</option>
-                <option value="tool">أداة</option>
-                <option value="action">إجراء</option>
+                <option value="path">{ui('مسار', 'Path')}</option>
+                <option value="tool">{ui('أداة', 'Tool')}</option>
+                <option value="action">{ui('إجراء', 'Action')}</option>
               </select>
               <select
                 value={newRule.level}
                 onChange={e => setNewRule({ ...newRule, level: e.target.value as PermissionLevel })}
                 className="w-full px-2 py-1.5 rounded bg-[#111118] border border-[#2a2a3a] text-xs text-white"
               >
-                <option value="allow">سماح</option>
-                <option value="ask">سؤال</option>
-                <option value="deny">رفض</option>
+                <option value="allow">{ui('سماح','Allow')}</option>
+                <option value="ask">{ui('سؤال','Ask')}</option>
+                <option value="deny">{ui('رفض','Deny')}</option>
               </select>
               <input
                 value={newRule.description}
                 onChange={e => setNewRule({ ...newRule, description: e.target.value })}
-                placeholder="الوصف (اختياري)"
+                placeholder={ui('الوصف (اختياري)','Description (optional)')}
                 className="w-full px-2 py-1.5 rounded bg-[#111118] border border-[#2a2a3a] text-xs text-white placeholder:text-[#64748b]"
                 dir="auto"
               />
@@ -278,7 +281,7 @@ export default function PermissionCenter({ config, onUpdate }: PermissionCenterP
                 className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-medium disabled:opacity-50"
               >
                 <CheckCircle className="w-3 h-3" />
-                إضافة القاعدة
+                {ui('إضافة القاعدة','Add rule')}
               </button>
             </motion.div>
           )}
@@ -286,7 +289,7 @@ export default function PermissionCenter({ config, onUpdate }: PermissionCenterP
           {/* Rules List */}
           {config.rules.length === 0 ? (
             <div className="text-center py-4">
-              <p className="text-[10px] text-[#64748b]">لا توجد قواعد مخصصة</p>
+              <p className="text-[10px] text-[#64748b]">{ui('لا توجد قواعد مخصصة','No custom rules')}</p>
             </div>
           ) : (
             <div className="space-y-1.5">
@@ -309,7 +312,7 @@ export default function PermissionCenter({ config, onUpdate }: PermissionCenterP
                     <div className="flex items-center gap-1">
                       <span className={`px-1.5 py-0.5 rounded border text-[9px] ${levelColors[rule.level]}`}>
                         <LevelIcon className="w-2.5 h-2.5 inline mr-0.5" />
-                        {rule.level === 'allow' ? 'سماح' : rule.level === 'ask' ? 'سؤال' : 'رفض'}
+                        {rule.level === 'allow' ? ui('سماح','Allow') : rule.level === 'ask' ? ui('سؤال','Ask') : ui('رفض','Deny')}
                       </span>
                       <button
                         onClick={() => handleDeleteRule(rule.id)}
@@ -330,9 +333,9 @@ export default function PermissionCenter({ config, onUpdate }: PermissionCenterP
           <div className="flex items-start gap-1.5">
             <Shield className="w-3.5 h-3.5 text-green-400 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-[10px] text-green-300 font-bold mb-0.5">الأمان أولاً</p>
+              <p className="text-[10px] text-green-300 font-bold mb-0.5">{ui('الأمان أولاً','Security first')}</p>
               <p className="text-[9px] text-green-300/80 leading-relaxed">
-                جميع العمليات الحساسة تتطلب موافقتك. لا يمكن للـ AI الوصول للبيانات الحساسة أو مجلدات النظام.
+                {ui('جميع العمليات الحساسة تتطلب موافقتك. لا يمكن للـ AI الوصول للبيانات الحساسة أو مجلدات النظام.','All sensitive operations require your approval. AI cannot access sensitive data or system directories.')}
               </p>
             </div>
           </div>

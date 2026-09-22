@@ -5,6 +5,7 @@ import {
   FileText, Lightbulb, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { ProjectMemory, MemoryEntry, createMemoryEntry } from '../utils/localMemory';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface LocalMemoryPanelProps {
   projectMemory: ProjectMemory;
@@ -12,6 +13,8 @@ interface LocalMemoryPanelProps {
 }
 
 export default function LocalMemoryPanel({ projectMemory, onUpdateMemory }: LocalMemoryPanelProps) {
+  const { language } = useLanguage();
+  const ui = (ar: string, en: string) => language === 'en' ? en : ar;
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newEntry, setNewEntry] = useState({
@@ -123,12 +126,12 @@ export default function LocalMemoryPanel({ projectMemory, onUpdateMemory }: Loca
         {/* Project Instructions */}
         <div className="p-3 rounded-lg bg-gradient-to-br from-purple-500/5 to-pink-500/5 border border-purple-500/20">
           <label className="text-[10px] font-bold text-purple-300 mb-1 block">
-            تعليمات المشروع
+            {ui('تعليمات المشروع','Project instructions')}
           </label>
           <textarea
             value={projectMemory.projectInstructions}
             onChange={e => handleUpdateInstructions(e.target.value)}
-            placeholder="أضف تعليمات خاصة بهذا المشروع..."
+            placeholder={ui('أضف تعليمات خاصة بهذا المشروع...','Add project-specific instructions...')}
             className="w-full p-2 rounded bg-[#0a0a0f] border border-[#2a2a3a] text-xs text-white placeholder:text-[#64748b] focus:border-purple-500/50 focus:outline-none resize-none"
             rows={3}
             dir="auto"
@@ -149,23 +152,23 @@ export default function LocalMemoryPanel({ projectMemory, onUpdateMemory }: Loca
                 onChange={e => setNewEntry({ ...newEntry, type: e.target.value as MemoryEntry['type'] })}
                 className="w-full px-2 py-1.5 rounded bg-[#111118] border border-[#2a2a3a] text-xs text-white"
               >
-                <option value="fact">حقيقة</option>
-                <option value="decision">قرار</option>
-                <option value="rule">قاعدة</option>
-                <option value="preference">تفضيل</option>
-                <option value="file-note">ملاحظة ملف</option>
+                <option value="fact">{ui('حقيقة','Fact')}</option>
+                <option value="decision">{ui('قرار','Decision')}</option>
+                <option value="rule">{ui('قاعدة','Rule')}</option>
+                <option value="preference">{ui('تفضيل','Preference')}</option>
+                <option value="file-note">{ui('ملاحظة ملف','File note')}</option>
               </select>
               <input
                 value={newEntry.title}
                 onChange={e => setNewEntry({ ...newEntry, title: e.target.value })}
-                placeholder="العنوان"
+                placeholder={ui('العنوان','Title')}
                 className="w-full px-2 py-1.5 rounded bg-[#111118] border border-[#2a2a3a] text-xs text-white placeholder:text-[#64748b]"
                 dir="auto"
               />
               <textarea
                 value={newEntry.content}
                 onChange={e => setNewEntry({ ...newEntry, content: e.target.value })}
-                placeholder="المحتوى"
+                placeholder={ui('المحتوى','Content')}
                 className="w-full px-2 py-1.5 rounded bg-[#111118] border border-[#2a2a3a] text-xs text-white placeholder:text-[#64748b] resize-none"
                 rows={3}
                 dir="auto"
@@ -175,7 +178,7 @@ export default function LocalMemoryPanel({ projectMemory, onUpdateMemory }: Loca
                   value={tagInput}
                   onChange={e => setTagInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && addTag()}
-                  placeholder="وسم"
+                  placeholder={ui('وسم','Tag')}
                   className="flex-1 px-2 py-1 rounded bg-[#111118] border border-[#2a2a3a] text-[10px] text-white placeholder:text-[#64748b]"
                   dir="auto"
                 />
@@ -183,7 +186,7 @@ export default function LocalMemoryPanel({ projectMemory, onUpdateMemory }: Loca
                   onClick={addTag}
                   className="px-2 py-1 rounded bg-[#252530] text-[10px] text-[#94a3b8] hover:bg-[#2a2a3a]"
                 >
-                  إضافة
+                  {ui('إضافة','Add')}
                 </button>
               </div>
               {newEntry.tags.length > 0 && (
@@ -207,7 +210,7 @@ export default function LocalMemoryPanel({ projectMemory, onUpdateMemory }: Loca
                 className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-medium disabled:opacity-50"
               >
                 <Save className="w-3 h-3" />
-                حفظ
+                {ui('حفظ','Save')}
               </button>
             </motion.div>
           )}
@@ -217,9 +220,9 @@ export default function LocalMemoryPanel({ projectMemory, onUpdateMemory }: Loca
         {sortedEntries.length === 0 ? (
           <div className="text-center py-8">
             <Brain className="w-10 h-10 text-[#2a2a3a] mx-auto mb-3" />
-            <p className="text-xs text-[#94a3b8] mb-1">لا توجد ذكريات</p>
+            <p className="text-xs text-[#94a3b8] mb-1">{ui('لا توجد ذكريات','No memories')}</p>
             <p className="text-[10px] text-[#64748b]">
-              أضف قرارات، قواعد، أو ملاحظات مهمة عن المشروع
+              {ui('أضف قرارات، قواعد، أو ملاحظات مهمة عن المشروع','Add decisions, rules, or important project notes')}
             </p>
           </div>
         ) : (
@@ -260,21 +263,21 @@ export default function LocalMemoryPanel({ projectMemory, onUpdateMemory }: Loca
                         </div>
                       )}
                       <p className="text-[8px] text-[#64748b] mt-1">
-                        {new Date(entry.updatedAt).toLocaleDateString('ar-EG')}
+                        {new Date(entry.updatedAt).toLocaleDateString(language === 'en' ? 'en-US' : 'ar-EG')}
                       </p>
                     </div>
                     <div className="flex items-center gap-0.5">
                       <button
                         onClick={() => handleTogglePin(entry.id)}
                         className="p-1 rounded hover:bg-[#252530] transition-colors"
-                        title={entry.pinned ? 'إلغاء التثبيت' : 'تثبيت'}
+                        title={entry.pinned ? ui('إلغاء التثبيت','Unpin') : ui('تثبيت','Pin')}
                       >
                         <Pin className={`w-3 h-3 ${entry.pinned ? 'text-yellow-400' : 'text-[#64748b]'}`} />
                       </button>
                       <button
                         onClick={() => handleDelete(entry.id)}
                         className="p-1 rounded hover:bg-red-500/10 transition-colors text-[#64748b] hover:text-red-400"
-                        title="حذف"
+                        title={ui('حذف','Delete')}
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
