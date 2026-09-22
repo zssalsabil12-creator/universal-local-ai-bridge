@@ -135,8 +135,12 @@ export default function CurrentAIBridgePanel({
   };  const runDiagnostics = async () => {
     if (!window.ulabDesktop?.isDesktop) return;
     setDiagnosticsBusy(true);
+    setBridgeState('VALIDATING');
     try {
       setDiagnostics(await window.ulabDesktop.aiDiagnostics());
+      const result: any = await window.ulabDesktop.aiCompatibilityCheck({ live: true });
+      if (result?.ok) setBridgeState('AI_CONNECTED');
+      else setBridgeState('AGENT_ERROR');
     } finally {
       setDiagnosticsBusy(false);
     }

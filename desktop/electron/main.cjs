@@ -15,6 +15,7 @@ const { isUsableAIWebContents } = require('./aiBridgeRuntime.cjs');
 const { buildAIInteractionScript, buildAIProbeScript, buildAssistantTextScript, buildLatestUserTextScript, buildLatestAIToolBlockScript, buildHideULABControlScript, buildHideULABToolCallScript, buildHideULABAssistantRequestScript, buildInstallULABSanitizerScript } = require('./aiBridgeDom.cjs');
 const { isLocalProjectWorkRequest } = require('./aiBridgeIntent.cjs');
 const { shouldRecoverBridgeControl: shouldRecoverBridgeControlFromModule } = require('./aiBridgeRecovery.cjs');
+const { BRIDGE_PROTOCOL_VERSION, LIVE_HANDSHAKE_TIMEOUT_MS, createBridgeNonce, buildHandshakePrompt, isHandshakeAck, buildCompatibilityResult } = require('./aiBridgeCompatibility.cjs');
 let agentProcess = null;
 let agentStartInFlight = null;
 let agentRestartAttempts = 0;
@@ -221,6 +222,7 @@ const pendingAIToolRequests = new Map();
 let aiSessionGeneration = 0;
 let aiBootstrapGeneration = -1;
 let aiViewVisible = true;
+let lastBridgeCompatibility = null;
 
 const ULAB_BRIDGE_BOOTSTRAP = [
   'ULAB Desktop bridge is active for this AI conversation.',
@@ -292,6 +294,44 @@ function aiInjectionScript(payload) {
   return buildAIInteractionScript(payload);
 }
 
+function emitAICompatibility(stage,status,detail={}) {
+  sendToRenderer('ai-compatibility',{protocolVersion:BRIDGE_PROTOCOL_VERSION,provider:aiProvider,stage,status,at:Date.now(),...detail});
+}
+async function waitForBridgeHandshakeAck(nonce,timeoutMs=LIVE_HANDSHAKE_TIMEOUT_MS){
+  const started=Date.now();
+  while(Date.now()-started<timeoutMs){
+    const text=await readLatestAssistantText();
+    if(isHandshakeAck(text,nonce)) return {ok:true,elapsedMs:Date.now()-started};
+    await new Promise(r=>setTimeout(r,700));
+  }
+  return {ok:false,error:'AI_HANDSHAKE_TIMEOUT'};
+}
+async function runAICompatibilityCheck(options={}){
+  const live=options.live===true, checks={};
+  const check=(n,ok,detail,error)=>{checks[n]={status:ok?'passed':'failed',detail:detail||error||null,error:error||null};emitAICompatibility(n,ok?'passed':'failed',{detail,error});};
+  setAIBridgeState('VALIDATING',{action:'bridge.compatibility.start',live});
+  check('agent',await startLocalAgent()&&await checkLocalAgentHealth(),'Local Agent health');
+  if(!aiView||!isUsableAIWebContents(aiView)) check('ai_page',false,null,'AI_SESSION_NOT_READY');
+  else {check('ai_page',true,'Embedded AI page');const d=await diagnoseAIPage();check('auth',d?.ok===true&&!d.authRequired,'Authentication clear',d?.authRequired?'AI_AUTH_REQUIRED':'AI_PAGE_DIAGNOSTICS_FAILED');check('composer',d?.state==='READY','Composer ready',d?.state!=='READY'?'AI_INPUT_NOT_READY':null);}
+  let parsed=false;try{parsed=!!extractAIToolRequest('test {"action":"files.list","params":{"path":"."}}')?.action}catch{}
+  check('parser',parsed,'Tool parser',parsed?null:'TOOL_PARSER_FAILED');
+  let sanitized=false;try{const r=await aiView?.webContents.executeJavaScript(buildInstallULABSanitizerScript(),true);sanitized=r?.installed===true}catch{}
+  check('sanitizer',sanitized,'DOM sanitizer',sanitized?null:'SANITIZER_INSTALL_FAILED');
+  let reader=false;try{reader=typeof await readLatestAssistantText()==='string'}catch{}
+  check('assistant_reader',reader,'Assistant reader',reader?null:'ASSISTANT_READER_FAILED');
+  if(live&&checks.auth?.status==='passed'&&checks.composer?.status==='passed'){const nonce=createBridgeNonce();const sent=await sendTextToAI(buildHandshakePrompt(nonce));if(!sent?.ok)check('handshake',false,null,sent?.error||sent?.reason||'HANDSHAKE_SEND_FAILED');else{const ack=await waitForBridgeHandshakeAck(nonce);check('handshake',ack.ok,'Live AI round-trip',ack.ok?null:ack.error);try{await aiView.webContents.executeJavaScript(buildHideULABHandshakeScript(),false)}catch{}}}
+  else if(live) check('handshake',false,null,'LIVE_HANDSHAKE_BLOCKED_BY_PREREQUISITES');
+  lastBridgeCompatibility=buildCompatibilityResult(checks,{live});emitAICompatibility('complete',lastBridgeCompatibility.ok?'passed':'failed',{result:lastBridgeCompatibility});setAIBridgeState(lastBridgeCompatibility.ok?'AI_CONNECTED':'AGENT_ERROR',{action:'bridge.compatibility.complete',live});return lastBridgeCompatibility;
+}
+async function startAILiveSmokeTest(){
+  const compatibility=await runAICompatibilityCheck({live:true});if(!compatibility?.ok)return {ok:false,reason:'BRIDGE_COMPATIBILITY_FAILED',compatibility};
+  const snapshot=await primeWorkspaceForAI();if(!snapshot?.success)return {ok:false,reason:'ACTIVE_WORKSPACE_REQUIRED'};
+  const nonce=createBridgeNonce(),smokePath='.ulab-live-smoke-'+nonce+'.txt',expected='ULAB live bridge verified';
+  activeAITask={id:'task-smoke-'+nonce,kind:'live-smoke',userText:'Live ULAB bridge smoke test',startedAt:Date.now(),source:'compatibility-smoke-test',smokePath,expectedContent:expected,agentSessionId:snapshot.data.session.sessionId};
+  setAIViewVisible(false);sendToRenderer('ai-live-smoke',{state:'running',path:smokePath});
+  const prompt=['ULAB LIVE BRIDGE SMOKE TEST','Use ULAB tools only. Create '+smokePath+' with exactly: '+expected,'Read it back and verify the exact content. Then emit task.complete.'].join('\n');
+  const result=await sendWhenAIReady(prompt);return result?.ok?{ok:true,path:smokePath}:{ok:false,error:result?.error||result?.reason||'SMOKE_START_FAILED'};
+}
 async function sendTextToAI(text) {
   if (!aiView) return { ok:false, error:'AI_SESSION_NOT_OPEN' };
   if (!isUsableAIWebContents(aiView)) return { ok:false, reason:'AI_PAGE_NOT_READY', error:'The AI page is still loading or has not initialized.' };

@@ -509,4 +509,13 @@ function buildLatestAIToolBlockScript() {
   })()`;
 }
 
-module.exports = { INPUT_SELECTORS, SEND_SELECTORS, ASSISTANT_SELECTORS, buildAIInteractionScript, buildAIProbeScript, buildAssistantTextScript, buildLatestUserTextScript, buildLatestAIToolBlockScript, buildHideULABControlScript, buildHideULABToolCallScript, buildHideULABAssistantRequestScript, buildInstallULABSanitizerScript, browserScript };
+function buildHideULABHandshakeScript() {
+  return `(() => {
+    const markers=['ULAB BRIDGE HANDSHAKE REQUEST','ULAB_BRIDGE_ACK:'];
+    const nodes=Array.from(document.querySelectorAll('[data-message-author-role="user"],[data-message-author-role="assistant"],[role="user"],[role="assistant"],main article,[role="article"]'));
+    let hidden=0;
+    for(const node of nodes){const text=String(node.innerText||node.textContent||'').trim();if(!markers.some(m=>text.includes(m)))continue;try{node.style.setProperty('display','none','important');node.setAttribute('data-ulab-handshake','true');hidden++;}catch{}}
+    return {ok:true,hidden};
+  })()`;
+}
+module.exports = { INPUT_SELECTORS, SEND_SELECTORS, ASSISTANT_SELECTORS, buildAIInteractionScript, buildAIProbeScript, buildAssistantTextScript, buildLatestUserTextScript, buildLatestAIToolBlockScript, buildHideULABControlScript, buildHideULABToolCallScript, buildHideULABAssistantRequestScript, buildInstallULABSanitizerScript, buildHideULABHandshakeScript, browserScript };

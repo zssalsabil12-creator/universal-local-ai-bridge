@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld('ulabDesktop', {
   closeAI: () => ipcRenderer.invoke('ai-close'),
   aiStatus: () => ipcRenderer.invoke('ai-status'),
   aiDiagnostics: () => ipcRenderer.invoke('ai-diagnostics'),
+  aiCompatibilityCheck: (options = {}) => ipcRenderer.invoke('ai-compatibility-check', options),
+  aiLiveSmokeTest: () => ipcRenderer.invoke('ai-live-smoke-test'),
   aiApprove: (approvalId, remember = false) => ipcRenderer.invoke('ai-approve', { approvalId, remember }),
   aiReject: (approvalId) => ipcRenderer.invoke('ai-reject', { approvalId }),
   sendAIText: (text) => ipcRenderer.invoke('ai-send-text', text),
@@ -49,6 +51,8 @@ contextBridge.exposeInMainWorld('ulabDesktop', {
     ipcRenderer.on('ai-agent-task', handler);
     return () => ipcRenderer.removeListener('ai-agent-task', handler);
   },
+  onAICompatibility: (callback) => { const handler=(_event,data)=>callback(data); ipcRenderer.on('ai-compatibility',handler); return ()=>ipcRenderer.removeListener('ai-compatibility',handler); },
+  onAILiveSmoke: (callback) => { const handler=(_event,data)=>callback(data); ipcRenderer.on('ai-live-smoke',handler); return ()=>ipcRenderer.removeListener('ai-live-smoke',handler); },
   onAISessionVisibility: (callback) => {
     const handler = (_event, data) => callback(data);
     ipcRenderer.on('ai-session-visibility', handler);

@@ -52,6 +52,8 @@ declare global {
         sessionState?: string;
       }>;
       aiDiagnostics: () => Promise<unknown>;
+      aiCompatibilityCheck: (options?: { live?: boolean }) => Promise<any>;
+      aiLiveSmokeTest: () => Promise<any>;
       aiApprove: (approvalId: string, remember?: boolean) => Promise<unknown>;
       aiReject: (approvalId: string) => Promise<unknown>;
       previewStart: () => Promise<any>;
@@ -65,6 +67,8 @@ declare global {
       onAIStatus: (callback: (data: unknown) => void) => () => void;
       onAIToolStatus: (callback: (data: unknown) => void) => () => void;
       onAIAgentTask: (callback: (data: unknown) => void) => () => void;
+      onAICompatibility: (callback: (data: unknown) => void) => () => void;
+      onAILiveSmoke: (callback: (data: unknown) => void) => () => void;
       onAISessionVisibility: (callback: (data: unknown) => void) => () => void;
     };
   }
